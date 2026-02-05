@@ -55,7 +55,7 @@ const CONFIG = {
   },
 
   sandbag: {
-    width: 2.4,
+    width: 2.7,   // tubouchi.png: 150x200 (アスペクト比 0.75)
     height: 3.6,
     mass: 5,
     weight: 100,        // スマブラ式の重さ（100が標準）

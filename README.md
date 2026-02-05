@@ -1,48 +1,25 @@
-# Homurun Game
+# 坪打ちコンテスト
 
-タイミングよくバットを振ってホームランを打つシンプルなブラウザゲーム。
+スマブラ風の操作でサンドバッグを吹っ飛ばし、飛距離を競うブラウザゲーム。
 
 ## Play
 
 **[Play Now](https://junhat6.github.io/homurun-game/)**
 
-## How to Play
+## 基本操作
 
-1. ボールがピッチャーから飛んでくる
-2. **スペースキー** または **クリック/タップ** でバットを振る
-3. タイミングよく打ってスコアを稼ごう！
-
-### Scoring
-
-| 判定 | ポイント |
-|------|---------|
-| HOME RUN!!! | 100点 |
-| Nice Hit! | 50点 |
-| Foul... | 10点 |
-| Strike! | 0点 |
-
-## Tech Stack
-
-- HTML5
-- CSS3
-- JavaScript (Canvas API)
+| キー | アクション |
+|------|-----------|
+| A/D | 移動（長押しでダッシュ） |
+| Space | ジャンプ（短押し: 小ジャンプ / 長押し: 大ジャンプ） |
+| J | 弱攻撃 |
+| K | 強攻撃 |
+| L | スマッシュ攻撃 |
+| B | バット（溜め可能） |
 
 ## Local Development
 
 ```bash
-# HTTPサーバーを起動
 python3 -m http.server 8000
-
-# ブラウザで開く
 open http://localhost:8000
-```
-
-## File Structure
-
-```
-homurun-game/
-├── index.html   # メインページ
-├── style.css    # スタイル
-├── game.js      # ゲームロジック
-└── README.md    # このファイル
 ```
