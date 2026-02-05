@@ -38,7 +38,7 @@ const { World, Vec2, Box, Circle, Edge } = planck;
 const CONFIG = {
   canvas: { width: 1000, height: 600 },
   physics: { scale: 30, gravity: -50 },  // 重力強化（素早く落下）
-  game: { timeLimit: 15 },  // 15秒に延長
+  game: { timeLimit: 13 },  // 13秒
 
   player: {
     width: 0.8,
@@ -123,8 +123,8 @@ const CONFIG = {
     // 弱攻撃1 - 発生が早い、コンボ始動
     weak: {
       damage: 2.5,
-      baseKnockback: 6,
-      knockbackGrowth: 0.3,
+      baseKnockback: 15,
+      knockbackGrowth: 25,    // コンボ継続性維持
       angle: 70,              // やや上に飛ばしてコンボ継続
       startup: 0.033,         // 2F
       active: 0.05,           // 3F
@@ -139,8 +139,8 @@ const CONFIG = {
     // 弱攻撃2段目
     weak2: {
       damage: 2.5,
-      baseKnockback: 8,
-      knockbackGrowth: 0.35,
+      baseKnockback: 18,
+      knockbackGrowth: 30,    // コンボ継続性維持
       angle: 72,
       startup: 0.033,
       active: 0.05,
@@ -155,8 +155,8 @@ const CONFIG = {
     // 弱攻撃3段目（フィニッシュブロー）
     weak3: {
       damage: 4,
-      baseKnockback: 40,
-      knockbackGrowth: 0.8,
+      baseKnockback: 35,
+      knockbackGrowth: 55,
       angle: 50,              // 斜め上に飛ばす
       startup: 0.067,         // 4F
       active: 0.067,
@@ -172,8 +172,8 @@ const CONFIG = {
     // 横強攻撃 - 角度調整可能、リーチ長め
     strong: {
       damage: 8,
-      baseKnockback: 20,
-      knockbackGrowth: 0.9,
+      baseKnockback: 30,
+      knockbackGrowth: 65,
       angle: 35,              // 横に飛ばす
       startup: 0.083,         // 5F
       active: 0.083,
@@ -189,8 +189,8 @@ const CONFIG = {
     // 上強 - ジャグリング用、お手玉の起点
     upperStrong: {
       damage: 7,
-      baseKnockback: 35,
-      knockbackGrowth: 1.0,
+      baseKnockback: 32,
+      knockbackGrowth: 70,
       angle: 88,              // ほぼ真上
       startup: 0.067,         // 4F
       active: 0.1,
@@ -206,8 +206,8 @@ const CONFIG = {
     // 下強 - 低姿勢、低角度で飛ばす
     downStrong: {
       damage: 6,
-      baseKnockback: 15,
-      knockbackGrowth: 0.7,
+      baseKnockback: 25,
+      knockbackGrowth: 55,
       angle: 20,              // 低角度（テクニカル）
       startup: 0.05,          // 3F 発生早い
       active: 0.1,
@@ -227,8 +227,8 @@ const CONFIG = {
       maxDamage: 22,
       baseKnockback: 30,
       maxBaseKnockback: 45,
-      knockbackGrowth: 1.6,
-      maxKnockbackGrowth: 2.2,
+      knockbackGrowth: 90,
+      maxKnockbackGrowth: 110,
       angle: 40,
       startup: 0.183,         // 11F 発生遅め
       active: 0.067,          // 4F
@@ -246,10 +246,10 @@ const CONFIG = {
     upSmash: {
       damage: 13,
       maxDamage: 20,
-      baseKnockback: 35,
-      maxBaseKnockback: 55,
-      knockbackGrowth: 1.4,
-      maxKnockbackGrowth: 2.0,
+      baseKnockback: 30,
+      maxBaseKnockback: 50,
+      knockbackGrowth: 80,
+      maxKnockbackGrowth: 100,
       angle: 85,
       startup: 0.133,         // 8F
       active: 0.117,          // 7F 持続長め
@@ -269,8 +269,8 @@ const CONFIG = {
       maxDamage: 18,
       baseKnockback: 25,
       maxBaseKnockback: 40,
-      knockbackGrowth: 1.3,
-      maxKnockbackGrowth: 1.8,
+      knockbackGrowth: 75,
+      maxKnockbackGrowth: 95,
       angle: 28,              // 低角度
       startup: 0.1,           // 6F
       active: 0.15,
@@ -287,8 +287,8 @@ const CONFIG = {
     // ダッシュ攻撃 - 突進、中ダメージ
     dashAttack: {
       damage: 9,
-      baseKnockback: 60,      // ある程度飛ばす
-      knockbackGrowth: 0.8,
+      baseKnockback: 40,
+      knockbackGrowth: 55,
       angle: 50,              // やや上
       startup: 0.067,         // 4F
       active: 0.117,
@@ -306,8 +306,8 @@ const CONFIG = {
     // 空N - 持続長い、暴れ用
     nair: {
       damage: 6,
-      baseKnockback: 18,
-      knockbackGrowth: 0.7,
+      baseKnockback: 12,
+      knockbackGrowth: 45,
       angle: 45,
       startup: 0.05,          // 3F
       active: 0.2,            // 12F 持続長い
@@ -324,8 +324,8 @@ const CONFIG = {
     // 空前 - メイン空中攻撃、コンボパーツ
     fair: {
       damage: 9,
-      baseKnockback: 15,
-      knockbackGrowth: 1.0,
+      baseKnockback: 12,
+      knockbackGrowth: 65,
       angle: 40,
       startup: 0.1,           // 6F
       active: 0.067,
@@ -342,8 +342,8 @@ const CONFIG = {
     // 空後 - 最強の空中技！スイートスポット重要
     bair: {
       damage: 14,
-      baseKnockback: 20,
-      knockbackGrowth: 1.5,
+      baseKnockback: 18,
+      knockbackGrowth: 90,
       angle: 35,              // 横に強く飛ばす
       startup: 0.117,         // 7F
       active: 0.05,           // 3F 持続短い
@@ -361,8 +361,8 @@ const CONFIG = {
     // 空上 - お手玉用、持続と範囲
     uair: {
       damage: 7,
-      baseKnockback: 16,
-      knockbackGrowth: 0.9,
+      baseKnockback: 12,
+      knockbackGrowth: 55,
       angle: 80,
       startup: 0.067,         // 4F
       active: 0.117,          // 7F
@@ -379,8 +379,8 @@ const CONFIG = {
     // 空下 - メテオ！リスク大、リターン大
     dair: {
       damage: 12,
-      baseKnockback: 20,
-      knockbackGrowth: 1.4,
+      baseKnockback: 18,
+      knockbackGrowth: 80,
       angle: -80,             // ほぼ真下
       startup: 0.183,         // 11F 発生遅い
       active: 0.083,          // 5F
@@ -399,10 +399,10 @@ const CONFIG = {
     bat: {
       damage: 30,
       maxDamage: 45,
-      baseKnockback: 150,
-      maxBaseKnockback: 280,
-      knockbackGrowth: 3.0,
-      maxKnockbackGrowth: 4.5,
+      baseKnockback: 50,
+      maxBaseKnockback: 80,
+      knockbackGrowth: 100,    // スマブラ式で/100されて1.0
+      maxKnockbackGrowth: 140, // 実質1.4
       angle: 45,
       startup: 0.233,         // 14F
       active: 0.133,          // 8F
@@ -847,6 +847,7 @@ const rankingScreen = document.getElementById('ranking-screen');
 const rankingList = document.getElementById('ranking-list');
 const minusRankingList = document.getElementById('minus-ranking-list');
 const rankingBtn = document.getElementById('rankingBtn');
+const startRankingBtn = document.getElementById('startRankingBtn');
 const closeRankingBtn = document.getElementById('closeRankingBtn');
 const nameInputModal = document.getElementById('name-input-modal');
 const playerNameInput = document.getElementById('player-name-input');
@@ -1544,7 +1545,7 @@ function getRageMultiplier() {
   return 1 + (maxMultiplier - 1) * ratio;
 }
 
-// スマブラ式ノックバック計算
+// スマブラ式ノックバック計算（本家準拠）
 function calculateKnockback(attack, targetDamage, chargeMultiplier = 1.0) {
   // 基本パラメータ
   let baseKB = attack.baseKnockback;
@@ -1556,13 +1557,24 @@ function calculateKnockback(attack, targetDamage, chargeMultiplier = 1.0) {
     growth = attack.knockbackGrowth + (attack.maxKnockbackGrowth - attack.knockbackGrowth) * chargeMultiplier;
   }
 
-  // スマブラ式ノックバック計算
-  // KB = (((damage * growth / 10) + baseKB) * (200 / (weight + 100)))
   const weight = CONFIG.sandbag.weight;
-  const damageComponent = (targetDamage * growth) / 10;
-  const weightModifier = 200 / (weight + 100);
 
-  let knockback = (damageComponent + baseKB) * weightModifier;
+  // 攻撃のダメージ（チャージ対応）
+  const attackDamage = attack.maxDamage
+    ? attack.damage + (attack.maxDamage - attack.damage) * chargeMultiplier
+    : attack.damage;
+
+  // 本家スマブラ準拠: ((p/10 + p*d/20) × 200/(w+100) × 1.4 + 18) × s + b
+  // p: ターゲットのダメージ%, d: 攻撃のダメージ, w: 重さ, s: スケーリング(growth/100), b: 基本ノックバック
+  const damageComponent = (targetDamage / 10) + (targetDamage * attackDamage / 20);
+  const weightModifier = 200 / (weight + 100);
+  const scaledDamage = (damageComponent * weightModifier * 1.4 + 18) * (growth / 100);
+
+  let knockback = scaledDamage + baseKB;
+
+  // デバッグ出力
+  console.log(`[KB Debug] targetDamage=${targetDamage}, attackDamage=${attackDamage}, growth=${growth}, baseKB=${baseKB}`);
+  console.log(`[KB Debug] damageComponent=${damageComponent.toFixed(1)}, weightMod=${weightModifier.toFixed(2)}, scaledDamage=${scaledDamage.toFixed(1)}, knockback=${knockback.toFixed(1)}`);
 
   // Rage補正
   knockback *= getRageMultiplier();
@@ -1901,9 +1913,16 @@ function applyHit(attack, direction, hitType = 'normal') {
     angle += 0.05; // やや上向きに
   }
 
-  // ノックバックベクトル
-  const kbX = Math.cos(angle) * knockback * direction;
-  const kbY = Math.sin(angle) * knockback;
+  // ノックバックベクトル（物理エンジン用にスケーリング）
+  // ノックバック値を物理エンジンが扱える範囲にスケーリング
+  // 高%でより飛ぶように、平方根ではなく線形スケーリングを使用
+  const physicsScale = 0.20;  // 物理エンジン用スケール係数（1000m到達用）
+  const scaledKnockback = knockback * physicsScale;
+
+  console.log(`[KB Debug] Final knockback=${knockback.toFixed(1)}, scaledForPhysics=${scaledKnockback.toFixed(1)}`);
+
+  const kbX = Math.cos(angle) * scaledKnockback * direction;
+  const kbY = Math.sin(angle) * scaledKnockback;
 
   // ヒットストップ（スイートスポットで増加）
   let hitstopTime = attack.hitstop;
@@ -2318,6 +2337,8 @@ function updateSandbag(dt) {
     }
 
     const vel = sandbag.getLinearVelocity();
+    const speed = vel.length();
+    const flyingTime = state.flyingTime || 0;
 
     // 地面に着いたらバラバラになる！
     if (pos.y < 3.2 && vel.y < -5) {
@@ -2326,8 +2347,15 @@ function updateSandbag(dt) {
       return;
     }
 
+    // サンドバッグがほぼ静止している場合（スタートエリアで止まっている等）
+    // 破裂せずに直接結果画面へ
+    if (speed < 1 && pos.y < 5 && flyingTime > 2) {
+      showResult();
+      return;
+    }
+
     // タイムアウト
-    const timeout = (state.flyingTime || 0) > 15;
+    const timeout = flyingTime > 15;
     if (timeout) {
       dismemberSandbag();
     }
@@ -3141,18 +3169,62 @@ function showResult() {
     recordEl.style.display = isNewRecord && distance !== 0 ? 'block' : 'none';
   }
 
-  // 距離に応じた評価
+  // 距離に応じた煽りメッセージ
   const ratingEl = document.getElementById('rating');
   if (ratingEl) {
-    let rating = '';
-    let color = '#fff';
-    if (distance >= 1000) { rating = 'LEGENDARY!!'; color = '#FF00FF'; }
-    else if (distance >= 500) { rating = 'AMAZING!'; color = '#FFD700'; }
-    else if (distance >= 200) { rating = 'GREAT!'; color = '#00FF00'; }
-    else if (distance >= 100) { rating = 'NICE!'; color = '#00BFFF'; }
-    else if (distance >= 50) { rating = 'GOOD'; color = '#FFFFFF'; }
-    else { rating = ''; }
-    ratingEl.textContent = rating;
+    const tauntMessages = {
+      negative: [
+        "ボタンを押すたびにIQが下がってないか？右に飛ばすという猿でもできることができないなら、もう人間やめろ。",
+        "どこ飛ばしてるんだよ。お前の実力は『下手』という言葉ですら生ぬるい。ただのゴミだ。"
+      ],
+      zero: [
+        "おーい、最後。吹っ飛ばすの忘れてるぞ？操作方法すら覚えられないなら、もうゲーム機売ってこい。",
+        "もしかして、ボタンの押し方も分からない赤ちゃんかな？早く哺乳瓶咥えて寝てろよ。"
+      ],
+      tier1: [ // 1m - 100m
+        "バットが一番吹っ飛ばし力が高い。なぜ使わない？シンプルにアホなのか？",
+        "操作方法ちゃんと見たか？バット使えと書いてるだろう。ったくこれだからZ世代は……"
+      ],
+      tier2: [ // 101m - 200m
+        "弱い。脳みそ足りてるか？まだ哺乳瓶咥えてるんじゃないだろうな？",
+        "今の、打ったんじゃなくて『置いた』だけだよね？バットが飾りだってことにいつ気づくんだ？"
+      ],
+      tier3: [ // 201m - 300m
+        "その指、タイピング専用か？画面の向こうで寝てるなら、起きてから出直してこい。",
+        "仕様通りに動かせないエンジニアかよ。お前の人生も一度デバッグしたほうがいいぞ。"
+      ],
+      tier4: [ // 301m - 449m
+        "ふん、ようやくおむつが取れたようだな。バットの使い方が少しは分かってきたか？",
+        "合格点だが、満足してんじゃねえぞ。お前の実力なんてAIの予備動作以下なんだからな。"
+      ],
+      tier5: [ // 450m以上
+        "…チッ、使いこなしやがって。宇宙まで飛ばして満足か？次は現実の課題でも飛ばしてろ。",
+        "認めたくないが、お前が最強だ。完璧すぎてムカつくわ。さっさと次のステージへ消えろ。"
+      ]
+    };
+
+    let messages;
+    let color = '#FF6B6B';
+    if (distance < 0) {
+      messages = tauntMessages.negative;
+    } else if (distance === 0) {
+      messages = tauntMessages.zero;
+    } else if (distance <= 100) {
+      messages = tauntMessages.tier1;
+    } else if (distance <= 200) {
+      messages = tauntMessages.tier2;
+    } else if (distance <= 300) {
+      messages = tauntMessages.tier3;
+    } else if (distance <= 449) {
+      messages = tauntMessages.tier4;
+      color = '#FFD700';
+    } else {
+      messages = tauntMessages.tier5;
+      color = '#00FF00';
+    }
+
+    const randomMessage = messages[Math.floor(Math.random() * messages.length)];
+    ratingEl.textContent = randomMessage;
     ratingEl.style.color = color;
   }
 }
@@ -3564,7 +3636,7 @@ document.addEventListener('keydown', (e) => {
       break;
     case 'Enter':
       if (state.phase === 'start') startGame();
-      else if (state.phase === 'result') resetGame();
+      else if (state.phase === 'result' || !rankingScreen.classList.contains('hidden')) resetGame();
       break;
   }
 });
@@ -3591,6 +3663,7 @@ document.addEventListener('keyup', (e) => {
 startBtn.addEventListener('click', startGame);
 retryBtn.addEventListener('click', resetGame);
 rankingBtn.addEventListener('click', showRanking);
+startRankingBtn.addEventListener('click', showRanking);
 closeRankingBtn.addEventListener('click', hideRanking);
 submitNameBtn.addEventListener('click', submitName);
 skipNameBtn.addEventListener('click', skipName);
