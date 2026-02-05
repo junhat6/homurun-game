@@ -420,6 +420,492 @@ const CONFIG = {
   }
 };
 
+
+// 距離に応じた背景テーマ定義
+const BACKGROUND_THEMES = [
+  {
+    minDistance: -Infinity,
+    maxDistance: 0,
+    name: '暗闘',
+    sky: { top: '#1a1a1a', middle: '#2d2d2d', bottom: '#3d3d3d' },
+    ground: '#2a2a2a',
+    elements: []
+  },
+  {
+    minDistance: 0,
+    maxDistance: 100,
+    name: '公園・草原',
+    sky: { top: '#4A90D9', middle: '#87CEEB', bottom: '#B4E7CE' },
+    ground: '#4CAF50',
+    elements: ['grass', 'trees']
+  },
+  {
+    minDistance: 100,
+    maxDistance: 200,
+    name: '郊外・田園',
+    sky: { top: '#5B9BD5', middle: '#7EC8E3', bottom: '#C8E6C9' },
+    ground: '#7CB342',
+    elements: ['houses', 'windmills']
+  },
+  {
+    minDistance: 200,
+    maxDistance: 300,
+    name: '山・森林',
+    sky: { top: '#2E5984', middle: '#4A7BA7', bottom: '#6B8E6B' },
+    ground: '#2E7D32',
+    elements: ['mountains', 'conifers']
+  },
+  {
+    minDistance: 300,
+    maxDistance: 450,
+    name: '高空・雲の上',
+    sky: { top: '#1A3A5C', middle: '#2E5984', bottom: '#5B9BD5' },
+    ground: null,
+    elements: ['bigClouds']
+  },
+  {
+    minDistance: 450,
+    maxDistance: Infinity,
+    name: '宇宙',
+    sky: { top: '#000510', middle: '#0A1628', bottom: '#1A3A5C' },
+    ground: null,
+    elements: ['stars', 'moon', 'earth']
+  }
+];
+
+// 色補間ユーティリティ関数
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+}
+
+function rgbToHex(r, g, b) {
+  return '#' + [r, g, b].map(x => {
+    const hex = Math.round(Math.max(0, Math.min(255, x))).toString(16);
+    return hex.length === 1 ? '0' + hex : hex;
+  }).join('');
+}
+
+function lerpColor(color1, color2, t) {
+  const c1 = hexToRgb(color1);
+  const c2 = hexToRgb(color2);
+  if (!c1 || !c2) return color1;
+  
+  const r = c1.r + (c2.r - c1.r) * t;
+  const g = c1.g + (c2.g - c1.g) * t;
+  const b = c1.b + (c2.b - c1.b) * t;
+  return rgbToHex(r, g, b);
+}
+
+// 距離に応じたテーマを取得（遷移を含む）
+function getBackgroundTheme(distance) {
+  const transitionWidth = 20; // 遷移幅（m）
+  
+  // 現在のテーマと次のテーマを見つける
+  let currentTheme = BACKGROUND_THEMES[0];
+  let nextTheme = null;
+  let transitionProgress = 0;
+  
+  for (let i = 0; i < BACKGROUND_THEMES.length; i++) {
+    const theme = BACKGROUND_THEMES[i];
+    if (distance >= theme.minDistance && distance < theme.maxDistance) {
+      currentTheme = theme;
+      
+      // 次のテーマへの遷移をチェック
+      if (i < BACKGROUND_THEMES.length - 1) {
+        const nextT = BACKGROUND_THEMES[i + 1];
+        const distToNext = theme.maxDistance - distance;
+        
+        if (distToNext <= transitionWidth) {
+          nextTheme = nextT;
+          transitionProgress = 1 - (distToNext / transitionWidth);
+        }
+      }
+      break;
+    }
+  }
+  
+  // 遷移中の場合、色を補間
+  if (nextTheme && transitionProgress > 0) {
+    return {
+      name: currentTheme.name + ' → ' + nextTheme.name,
+      sky: {
+        top: lerpColor(currentTheme.sky.top, nextTheme.sky.top, transitionProgress),
+        middle: lerpColor(currentTheme.sky.middle, nextTheme.sky.middle, transitionProgress),
+        bottom: lerpColor(currentTheme.sky.bottom, nextTheme.sky.bottom, transitionProgress)
+      },
+      ground: currentTheme.ground && nextTheme.ground 
+        ? lerpColor(currentTheme.ground, nextTheme.ground, transitionProgress)
+        : (transitionProgress < 0.5 ? currentTheme.ground : nextTheme.ground),
+      elements: transitionProgress < 0.5 ? currentTheme.elements : nextTheme.elements,
+      transitionProgress: transitionProgress,
+      currentTheme: currentTheme,
+      nextTheme: nextTheme
+    };
+  }
+  
+  return {
+    ...currentTheme,
+    transitionProgress: 0,
+    currentTheme: currentTheme,
+    nextTheme: null
+  };
+}
+
+// 背景要素描画関数
+function drawBackgroundElements(cameraX, elements, distance, groundY) {
+  const parallaxFactor = 0.3;
+  const baseX = cameraX * parallaxFactor;
+  
+  elements.forEach(element => {
+    switch(element) {
+      case 'grass':
+        drawGrass(cameraX, groundY);
+        break;
+      case 'trees':
+        drawTrees(baseX, groundY);
+        break;
+      case 'houses':
+        drawHouses(baseX, groundY);
+        break;
+      case 'windmills':
+        drawWindmills(baseX, groundY);
+        break;
+      case 'mountains':
+        drawMountains(baseX, groundY);
+        break;
+      case 'conifers':
+        drawConifers(baseX, groundY);
+        break;
+      case 'bigClouds':
+        drawBigClouds(cameraX);
+        break;
+      case 'stars':
+        drawStars(cameraX);
+        break;
+      case 'moon':
+        drawMoon(cameraX);
+        break;
+      case 'earth':
+        drawEarth(cameraX);
+        break;
+    }
+  });
+}
+
+// 草を描画
+function drawGrass(cameraX, groundY) {
+  ctx.fillStyle = '#228B22';
+  const grassWidth = 3;
+  const grassSpacing = 15;
+  const startX = Math.floor(cameraX / grassSpacing) * grassSpacing;
+  
+  for (let x = startX; x < cameraX + CONFIG.canvas.width + grassSpacing; x += grassSpacing) {
+    const height = 8 + Math.sin(x * 0.1) * 4;
+    ctx.beginPath();
+    ctx.moveTo(x, groundY);
+    ctx.lineTo(x - grassWidth / 2, groundY - height);
+    ctx.lineTo(x + grassWidth / 2, groundY - height);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+// 木を描画
+function drawTrees(baseX, groundY) {
+  ctx.fillStyle = '#228B22';
+  const treeSpacing = 200;
+  const startX = Math.floor(baseX / treeSpacing) * treeSpacing;
+  
+  for (let x = startX; x < baseX + CONFIG.canvas.width / 0.3 + treeSpacing; x += treeSpacing) {
+    const screenX = x - baseX + 50;
+    const treeHeight = 60 + Math.sin(x * 0.01) * 20;
+    
+    // 幹
+    ctx.fillStyle = '#8B4513';
+    ctx.fillRect(screenX - 5, groundY - treeHeight, 10, treeHeight * 0.4);
+    
+    // 葉
+    ctx.fillStyle = '#228B22';
+    ctx.beginPath();
+    ctx.arc(screenX, groundY - treeHeight * 0.7, treeHeight * 0.35, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// 家を描画
+function drawHouses(baseX, groundY) {
+  const houseSpacing = 300;
+  const startX = Math.floor(baseX / houseSpacing) * houseSpacing;
+  
+  for (let x = startX; x < baseX + CONFIG.canvas.width / 0.3 + houseSpacing; x += houseSpacing) {
+    const screenX = x - baseX + 100;
+    const houseWidth = 50;
+    const houseHeight = 35;
+    
+    // 壁
+    ctx.fillStyle = '#F5DEB3';
+    ctx.fillRect(screenX - houseWidth / 2, groundY - houseHeight, houseWidth, houseHeight);
+    
+    // 屋根
+    ctx.fillStyle = '#8B0000';
+    ctx.beginPath();
+    ctx.moveTo(screenX - houseWidth / 2 - 5, groundY - houseHeight);
+    ctx.lineTo(screenX, groundY - houseHeight - 25);
+    ctx.lineTo(screenX + houseWidth / 2 + 5, groundY - houseHeight);
+    ctx.closePath();
+    ctx.fill();
+    
+    // 窓
+    ctx.fillStyle = '#87CEEB';
+    ctx.fillRect(screenX - 10, groundY - houseHeight + 10, 8, 8);
+    ctx.fillRect(screenX + 2, groundY - houseHeight + 10, 8, 8);
+  }
+}
+
+// 風車を描画
+function drawWindmills(baseX, groundY) {
+  const windmillSpacing = 400;
+  const startX = Math.floor(baseX / windmillSpacing) * windmillSpacing + 150;
+  
+  for (let x = startX; x < baseX + CONFIG.canvas.width / 0.3 + windmillSpacing; x += windmillSpacing) {
+    const screenX = x - baseX;
+    const height = 80;
+    const time = Date.now() / 1000;
+    
+    // 塔
+    ctx.fillStyle = '#F5F5DC';
+    ctx.beginPath();
+    ctx.moveTo(screenX - 8, groundY);
+    ctx.lineTo(screenX + 8, groundY);
+    ctx.lineTo(screenX + 4, groundY - height);
+    ctx.lineTo(screenX - 4, groundY - height);
+    ctx.closePath();
+    ctx.fill();
+    
+    // 羽根
+    ctx.strokeStyle = '#654321';
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 4; i++) {
+      const angle = time * 2 + (i * Math.PI / 2);
+      const bladeLength = 30;
+      ctx.beginPath();
+      ctx.moveTo(screenX, groundY - height);
+      ctx.lineTo(
+        screenX + Math.cos(angle) * bladeLength,
+        groundY - height + Math.sin(angle) * bladeLength
+      );
+      ctx.stroke();
+    }
+  }
+}
+
+// 山を描画
+function drawMountains(baseX, groundY) {
+  const mountainSpacing = 250;
+  const startX = Math.floor(baseX / mountainSpacing) * mountainSpacing;
+  
+  for (let x = startX; x < baseX + CONFIG.canvas.width / 0.3 + mountainSpacing; x += mountainSpacing) {
+    const screenX = x - baseX;
+    const height = 150 + Math.sin(x * 0.005) * 50;
+    
+    // 山本体
+    ctx.fillStyle = '#4A5D4A';
+    ctx.beginPath();
+    ctx.moveTo(screenX - 100, groundY);
+    ctx.lineTo(screenX, groundY - height);
+    ctx.lineTo(screenX + 100, groundY);
+    ctx.closePath();
+    ctx.fill();
+    
+    // 雪冠
+    ctx.fillStyle = '#FFFFFF';
+    ctx.beginPath();
+    ctx.moveTo(screenX - 20, groundY - height + 30);
+    ctx.lineTo(screenX, groundY - height);
+    ctx.lineTo(screenX + 20, groundY - height + 30);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+// 針葉樹を描画
+function drawConifers(baseX, groundY) {
+  const treeSpacing = 120;
+  const startX = Math.floor(baseX / treeSpacing) * treeSpacing;
+  
+  for (let x = startX; x < baseX + CONFIG.canvas.width / 0.3 + treeSpacing; x += treeSpacing) {
+    const screenX = x - baseX + 30;
+    const treeHeight = 50 + Math.sin(x * 0.02) * 15;
+    
+    // 幹
+    ctx.fillStyle = '#654321';
+    ctx.fillRect(screenX - 4, groundY - treeHeight * 0.3, 8, treeHeight * 0.3);
+    
+    // 三角形の葉
+    ctx.fillStyle = '#1B4D1B';
+    ctx.beginPath();
+    ctx.moveTo(screenX, groundY - treeHeight);
+    ctx.lineTo(screenX - 20, groundY - treeHeight * 0.3);
+    ctx.lineTo(screenX + 20, groundY - treeHeight * 0.3);
+    ctx.closePath();
+    ctx.fill();
+  }
+}
+
+// 大きな雲を描画（高空）
+function drawBigClouds(cameraX) {
+  const cloudData = [
+    { x: 200, y: 400, size: 1.5 },
+    { x: 500, y: 300, size: 2 },
+    { x: 800, y: 450, size: 1.8 },
+    { x: 1200, y: 350, size: 2.2 },
+    { x: 1600, y: 420, size: 1.6 }
+  ];
+  
+  const parallaxFactor = 0.2;
+  const offsetX = (cameraX * parallaxFactor) % 2000;
+  
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+  
+  cloudData.forEach(cloud => {
+    let screenX = cloud.x - offsetX;
+    if (screenX < -200) screenX += 2000;
+    if (screenX > CONFIG.canvas.width + 200) return;
+    
+    const size = cloud.size * 40;
+    
+    // 複数の円で雲を構成
+    ctx.beginPath();
+    ctx.arc(screenX, cloud.y, size, 0, Math.PI * 2);
+    ctx.arc(screenX - size * 0.6, cloud.y + size * 0.2, size * 0.7, 0, Math.PI * 2);
+    ctx.arc(screenX + size * 0.6, cloud.y + size * 0.2, size * 0.7, 0, Math.PI * 2);
+    ctx.arc(screenX - size * 0.3, cloud.y - size * 0.3, size * 0.6, 0, Math.PI * 2);
+    ctx.arc(screenX + size * 0.3, cloud.y - size * 0.3, size * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+  });
+}
+
+// 星を描画（宇宙）
+function drawStars(cameraX) {
+  // 固定の星データ（シードベース）
+  const starCount = 100;
+  const parallaxFactor = 0.05;
+  const offsetX = (cameraX * parallaxFactor) % 3000;
+  
+  ctx.fillStyle = '#FFFFFF';
+  
+  for (let i = 0; i < starCount; i++) {
+    // 疑似乱数でシード固定
+    const seed = i * 12345;
+    const x = ((seed * 9301 + 49297) % 233280) / 233280 * 3000;
+    const y = ((seed * 7621 + 35677) % 233280) / 233280 * (CONFIG.canvas.height * 0.8);
+    const size = ((seed * 4567 + 12345) % 233280) / 233280 * 2 + 0.5;
+    const twinkle = Math.sin(Date.now() / 500 + i) * 0.3 + 0.7;
+    
+    let screenX = x - offsetX;
+    if (screenX < -10) screenX += 3000;
+    if (screenX > CONFIG.canvas.width + 10) continue;
+    
+    ctx.globalAlpha = twinkle;
+    ctx.beginPath();
+    ctx.arc(screenX, y, size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// 月を描画
+function drawMoon(cameraX) {
+  const parallaxFactor = 0.02;
+  const moonX = 700 - cameraX * parallaxFactor;
+  const moonY = 100;
+  const moonRadius = 50;
+  
+  if (moonX < -moonRadius || moonX > CONFIG.canvas.width + moonRadius) return;
+  
+  // 月の光
+  const gradient = ctx.createRadialGradient(moonX, moonY, moonRadius * 0.8, moonX, moonY, moonRadius * 2);
+  gradient.addColorStop(0, 'rgba(255, 255, 200, 0.3)');
+  gradient.addColorStop(1, 'rgba(255, 255, 200, 0)');
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, moonRadius * 2, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // 月本体
+  ctx.fillStyle = '#FFFACD';
+  ctx.beginPath();
+  ctx.arc(moonX, moonY, moonRadius, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // クレーター
+  ctx.fillStyle = 'rgba(200, 200, 180, 0.3)';
+  ctx.beginPath();
+  ctx.arc(moonX - 15, moonY - 10, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(moonX + 20, moonY + 15, 8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(moonX - 5, moonY + 20, 6, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+// 地球を描画
+function drawEarth(cameraX) {
+  const parallaxFactor = 0.01;
+  const earthX = 300 - cameraX * parallaxFactor;
+  const earthY = CONFIG.canvas.height - 80;
+  const earthRadius = 200;
+  
+  // 地球の一部（下半分が見える）
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, CONFIG.canvas.width, CONFIG.canvas.height);
+  ctx.clip();
+  
+  // 大気の光（グロー効果）
+  const glowGradient = ctx.createRadialGradient(earthX, earthY, earthRadius * 0.9, earthX, earthY, earthRadius * 1.2);
+  glowGradient.addColorStop(0, 'rgba(100, 180, 255, 0.4)');
+  glowGradient.addColorStop(1, 'rgba(100, 180, 255, 0)');
+  ctx.fillStyle = glowGradient;
+  ctx.beginPath();
+  ctx.arc(earthX, earthY, earthRadius * 1.2, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // 地球本体（青い部分）
+  ctx.fillStyle = '#1E90FF';
+  ctx.beginPath();
+  ctx.arc(earthX, earthY, earthRadius, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // 大陸（緑）
+  ctx.fillStyle = '#228B22';
+  // 簡略化された大陸
+  ctx.beginPath();
+  ctx.ellipse(earthX - 40, earthY - 60, 50, 30, -0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(earthX + 60, earthY - 30, 35, 45, 0.2, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // 雲
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+  ctx.beginPath();
+  ctx.ellipse(earthX - 20, earthY - 80, 40, 15, 0.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(earthX + 50, earthY - 50, 30, 10, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  
+  ctx.restore();
+}
+
 // Game State
 const state = {
   phase: 'start',
@@ -444,7 +930,8 @@ const state = {
   totalDamageDealt: 0,
   comboProration: 1.0,
   dismembered: false,  // バラバラになったかどうか
-  farthestPart: null   // 一番遠くに飛んだパーツ
+  farthestPart: null,  // 一番遠くに飛んだパーツ
+  timeUpPending: false // チャージ中の時間切れ保留フラグ
 };
 
 // ============================================
@@ -1993,6 +2480,15 @@ function endAttack() {
   player.cancelWindow = false;
   chargeBar.classList.add('hidden');
 
+  // 時間切れ保留中なら flying フェーズへ移行
+  if (state.timeUpPending && !state.launched) {
+    state.launched = true;
+    state.phase = 'flying';
+    state.flyingTime = 0;
+    distanceEl.classList.remove('hidden');
+    state.timeUpPending = false;
+  }
+
   setTimeout(() => { player.canAttack = true; }, 30);
 }
 
@@ -2435,16 +2931,30 @@ function draw() {
 }
 
 function drawBackground(cameraX) {
+  // 現在の距離を取得（flyingフェーズでなければ0）
+  const distance = state.phase === 'flying' ? state.distance : 0;
+  
+  // 距離に応じたテーマを取得
+  const theme = getBackgroundTheme(distance);
+  
+  // 空のグラデーション
   const gradient = ctx.createLinearGradient(0, 0, 0, CONFIG.canvas.height);
-  gradient.addColorStop(0, '#87CEEB');
-  gradient.addColorStop(0.7, '#E0F7FA');
-  gradient.addColorStop(1, '#90EE90');
+  gradient.addColorStop(0, theme.sky.top);
+  gradient.addColorStop(0.5, theme.sky.middle);
+  gradient.addColorStop(1, theme.sky.bottom);
   ctx.fillStyle = gradient;
   ctx.fillRect(cameraX, 0, CONFIG.canvas.width, CONFIG.canvas.height);
-
+  
   const groundY = CONFIG.canvas.height - CONFIG.physics.scale;
-  ctx.fillStyle = '#4CAF50';
-  ctx.fillRect(cameraX, groundY, CONFIG.canvas.width, CONFIG.physics.scale);
+  
+  // 背景要素を描画
+  drawBackgroundElements(cameraX, theme.elements, distance, groundY);
+  
+  // 地面を描画（地面がある場合のみ）
+  if (theme.ground) {
+    ctx.fillStyle = theme.ground;
+    ctx.fillRect(cameraX, groundY, CONFIG.canvas.width, CONFIG.physics.scale);
+  }
 }
 
 function drawDistanceMarkers(cameraX) {
@@ -3071,11 +3581,16 @@ function gameLoop(currentTime) {
     if (state.timer <= 0) {
       state.timer = 0;
       if (!state.launched) {
-        // 時間切れ：現在の状態のままflyingフェーズへ
-        state.launched = true;
-        state.phase = 'flying';
-        state.flyingTime = 0;  // 飛行時間カウント開始
-        distanceEl.classList.remove('hidden');
+        if (player.charging) {
+          // チャージ中なら移行を保留
+          state.timeUpPending = true;
+        } else {
+          // チャージ中でなければflyingフェーズへ
+          state.launched = true;
+          state.phase = 'flying';
+          state.flyingTime = 0;  // 飛行時間カウント開始
+          distanceEl.classList.remove('hidden');
+        }
       }
     }
   }
@@ -3486,6 +4001,7 @@ function startGame() {
   state.distance = 0;
   state.maxDistance = null;
   state.launched = false;
+  state.timeUpPending = false;
   state.hitstop = 0;
   state.slowMotion = 0;
   state.slowMotionScale = 1;
