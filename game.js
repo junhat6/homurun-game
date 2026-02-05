@@ -417,6 +417,383 @@ const state = {
     farthestPart: null   // 一番遠くに飛んだパーツ
 };
 
+// ============================================
+// Audio System - Web Audio API
+// ============================================
+let audioContext = null;
+
+function initAudio() {
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioContext.state === 'suspended') {
+        audioContext.resume();
+    }
+}
+
+// スイング音（攻撃タイプに応じて変化）
+function playSwingSound(type) {
+    if (!audioContext) return;
+    
+    const now = audioContext.currentTime;
+    
+    // ノイズ生成
+    const bufferSize = audioContext.sampleRate * 0.1;
+    const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+    }
+    
+    const noise = audioContext.createBufferSource();
+    noise.buffer = buffer;
+    
+    // フィルター（攻撃タイプで周波数変更）
+    const filter = audioContext.createBiquadFilter();
+    filter.type = 'bandpass';
+    
+    const gain = audioContext.createGain();
+    
+    switch(type) {
+        case 'weak':
+        case 'weak2':
+        case 'weak3':
+            filter.frequency.value = 3000;
+            filter.Q.value = 1;
+            gain.gain.setValueAtTime(0.15, now);
+            break;
+        case 'strong':
+        case 'dtilt':
+        case 'utilt':
+            filter.frequency.value = 1500;
+            filter.Q.value = 0.8;
+            gain.gain.setValueAtTime(0.25, now);
+            break;
+        case 'smash':
+        case 'upSmash':
+        case 'downSmash':
+            filter.frequency.value = 800;
+            filter.Q.value = 0.5;
+            gain.gain.setValueAtTime(0.35, now);
+            break;
+        case 'bat':
+            filter.frequency.value = 500;
+            filter.Q.value = 0.3;
+            gain.gain.setValueAtTime(0.5, now);
+            break;
+        default:
+            filter.frequency.value = 2000;
+            filter.Q.value = 1;
+            gain.gain.setValueAtTime(0.2, now);
+    }
+    
+    gain.gain.exponentialDecayTo && gain.gain.exponentialDecayTo(0.001, now + 0.1);
+    gain.gain.setValueAtTime(gain.gain.value, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioContext.destination);
+    
+    noise.start(now);
+    noise.stop(now + 0.15);
+}
+
+// カウントダウン音（3, 2, 1）- 短いビープ音
+function playCountdownSound(count) {
+    if (!audioContext) return;
+
+    const now = audioContext.currentTime;
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.value = 440 + (3 - count) * 50;  // 3: 440Hz, 2: 490Hz, 1: 540Hz
+
+    gain.gain.setValueAtTime(0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.2);
+}
+
+// GO!音 - より高く明るい音
+function playGoSound() {
+    if (!audioContext) return;
+
+    const now = audioContext.currentTime;
+
+    // メイン音（高い周波数）
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.value = 880;  // 高い音
+
+    gain.gain.setValueAtTime(0.4, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.4);
+
+    // ハーモニー音（オクターブ上）
+    const osc2 = audioContext.createOscillator();
+    const gain2 = audioContext.createGain();
+
+    osc2.type = 'sine';
+    osc2.frequency.value = 1320;
+
+    gain2.gain.setValueAtTime(0.2, now);
+    gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+
+    osc2.connect(gain2);
+    gain2.connect(audioContext.destination);
+
+    osc2.start(now);
+    osc2.stop(now + 0.3);
+}
+
+// ヒット音（ダメージ量とヒットタイプで変化）
+function playHitSound(knockback, hitType, isBat = false) {
+    if (!audioContext) return;
+    
+    const now = audioContext.currentTime;
+    
+    // インパクト音（オシレーター）
+    const osc = audioContext.createOscillator();
+    const oscGain = audioContext.createGain();
+    
+    // ノイズ成分
+    const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.15, audioContext.sampleRate);
+    const noiseData = noiseBuffer.getChannelData(0);
+    for (let i = 0; i < noiseData.length; i++) {
+        noiseData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (noiseData.length * 0.2));
+    }
+    const noise = audioContext.createBufferSource();
+    noise.buffer = noiseBuffer;
+    const noiseGain = audioContext.createGain();
+    
+    // ヒットタイプによる音の変化
+    let baseFreq = 150;
+    let volume = 0.3;
+    let duration = 0.1;
+    
+    if (isBat) {
+        // バット音 - 強烈なインパクト
+        baseFreq = 80;
+        volume = 0.7;
+        duration = 0.3;
+        osc.type = 'sawtooth';
+    } else if (hitType === 'sweetspot') {
+        // スイートスポット - クリーンな高い音
+        baseFreq = 300 + knockback * 2;
+        volume = 0.5;
+        duration = 0.15;
+        osc.type = 'triangle';
+    } else if (hitType === 'sourspot') {
+        // サワースポット - 鈍い音
+        baseFreq = 100;
+        volume = 0.2;
+        duration = 0.08;
+        osc.type = 'sine';
+    } else {
+        // 通常ヒット
+        baseFreq = 150 + knockback;
+        volume = 0.3 + Math.min(knockback / 100, 0.3);
+        osc.type = 'square';
+    }
+    
+    osc.frequency.setValueAtTime(baseFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(baseFreq * 0.3, now + duration);
+    
+    oscGain.gain.setValueAtTime(volume, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    
+    noiseGain.gain.setValueAtTime(volume * 0.5, now);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, now + duration * 0.7);
+    
+    osc.connect(oscGain);
+    oscGain.connect(audioContext.destination);
+    
+    noise.connect(noiseGain);
+    noiseGain.connect(audioContext.destination);
+    
+    osc.start(now);
+    osc.stop(now + duration);
+    noise.start(now);
+    noise.stop(now + duration);
+}
+
+// コンボ音（コンボ数に応じてピッチ上昇）
+function playComboSound(comboCount) {
+    if (!audioContext || comboCount < 3) return;
+    
+    const now = audioContext.currentTime;
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    
+    // コンボ数でピッチを上げる
+    const baseFreq = 400 + Math.min(comboCount * 50, 800);
+    
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(baseFreq, now);
+    osc.frequency.setValueAtTime(baseFreq * 1.5, now + 0.05);
+    
+    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+    
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    
+    osc.start(now);
+    osc.stop(now + 0.1);
+}
+
+// バラバラになる時のグロ効果音
+function playDismemberSound() {
+    if (!audioContext) return;
+    
+    const now = audioContext.currentTime;
+    
+    // 1. 肉が裂ける音 (低音のウェットなノイズ)
+    const tearBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.4, audioContext.sampleRate);
+    const tearData = tearBuffer.getChannelData(0);
+    for (let i = 0; i < tearData.length; i++) {
+        const t = i / tearData.length;
+        // 不規則なノイズ + 低周波のうねり
+        tearData[i] = (Math.random() * 2 - 1) * Math.exp(-t * 3) * 
+                      (1 + Math.sin(t * 50) * 0.5) * 
+                      (Math.random() > 0.7 ? 1.5 : 1);
+    }
+    const tearNoise = audioContext.createBufferSource();
+    tearNoise.buffer = tearBuffer;
+    
+    const tearFilter = audioContext.createBiquadFilter();
+    tearFilter.type = 'lowpass';
+    tearFilter.frequency.value = 800;
+    tearFilter.Q.value = 2;
+    
+    const tearGain = audioContext.createGain();
+    tearGain.gain.setValueAtTime(0.6, now);
+    tearGain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+    
+    tearNoise.connect(tearFilter);
+    tearFilter.connect(tearGain);
+    tearGain.connect(audioContext.destination);
+    
+    tearNoise.start(now);
+    tearNoise.stop(now + 0.4);
+    
+    // 2. 骨が折れる音 (複数のクラック音)
+    for (let i = 0; i < 3; i++) {
+        const crackTime = now + i * 0.05 + Math.random() * 0.03;
+        
+        const crackOsc = audioContext.createOscillator();
+        const crackGain = audioContext.createGain();
+        
+        crackOsc.type = 'square';
+        crackOsc.frequency.setValueAtTime(200 + Math.random() * 100, crackTime);
+        crackOsc.frequency.exponentialRampToValueAtTime(50, crackTime + 0.03);
+        
+        crackGain.gain.setValueAtTime(0.4, crackTime);
+        crackGain.gain.exponentialRampToValueAtTime(0.001, crackTime + 0.05);
+        
+        crackOsc.connect(crackGain);
+        crackGain.connect(audioContext.destination);
+        
+        crackOsc.start(crackTime);
+        crackOsc.stop(crackTime + 0.05);
+    }
+    
+    // 3. 内臓が飛び散る音 (ぐちゃっとしたウェット音)
+    const splatterBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.3, audioContext.sampleRate);
+    const splatterData = splatterBuffer.getChannelData(0);
+    for (let i = 0; i < splatterData.length; i++) {
+        const t = i / splatterData.length;
+        // バブル的な音 + ランダムなスプラッター
+        splatterData[i] = (Math.random() * 2 - 1) * 
+                          Math.exp(-t * 4) * 
+                          (1 + Math.sin(t * 200 + Math.random() * 10) * 0.8);
+    }
+    const splatterNoise = audioContext.createBufferSource();
+    splatterNoise.buffer = splatterBuffer;
+    
+    const splatterFilter = audioContext.createBiquadFilter();
+    splatterFilter.type = 'bandpass';
+    splatterFilter.frequency.value = 400;
+    splatterFilter.Q.value = 1;
+    
+    const splatterGain = audioContext.createGain();
+    splatterGain.gain.setValueAtTime(0.5, now + 0.05);
+    splatterGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    
+    splatterNoise.connect(splatterFilter);
+    splatterFilter.connect(splatterGain);
+    splatterGain.connect(audioContext.destination);
+    
+    splatterNoise.start(now + 0.05);
+    splatterNoise.stop(now + 0.35);
+    
+    // 4. 低音のインパクト (ズンという重低音)
+    const impactOsc = audioContext.createOscillator();
+    const impactGain = audioContext.createGain();
+    
+    impactOsc.type = 'sine';
+    impactOsc.frequency.setValueAtTime(60, now);
+    impactOsc.frequency.exponentialRampToValueAtTime(20, now + 0.3);
+    
+    impactGain.gain.setValueAtTime(0.7, now);
+    impactGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+    
+    impactOsc.connect(impactGain);
+    impactGain.connect(audioContext.destination);
+    
+    impactOsc.start(now);
+    impactOsc.stop(now + 0.3);
+}
+
+// 結果表示音
+function playResultSound(distance) {
+    if (!audioContext) return;
+    
+    const now = audioContext.currentTime;
+    
+    // 距離に応じた音の変化
+    let notes;
+    if (distance >= 500) {
+        notes = [523, 659, 784, 1047]; // ド ミ ソ ド（高）
+    } else if (distance >= 100) {
+        notes = [392, 494, 587]; // ソ シ レ
+    } else {
+        notes = [262, 330]; // ド ミ
+    }
+    
+    notes.forEach((freq, i) => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        
+        const startTime = now + i * 0.15;
+        gain.gain.setValueAtTime(0, startTime);
+        gain.gain.linearRampToValueAtTime(0.3, startTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.4);
+        
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        osc.start(startTime);
+        osc.stop(startTime + 0.5);
+    });
+}
+
 // Canvas Setup
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -658,6 +1035,9 @@ const BODY_PART_TYPES = {
 // サンドバッグをバラバラにする
 function dismemberSandbag() {
     if (!sandbag || state.dismembered) return;
+    
+    // グロ効果音を再生
+    playDismemberSound();
 
     const pos = sandbag.getPosition();
     const vel = sandbag.getLinearVelocity();
@@ -1166,6 +1546,9 @@ function startAttack(type) {
         player.chargeAmount = 0;
         chargeBar.classList.remove('hidden');
     }
+    
+    // スイング音を再生
+    playSwingSound(actualType);
 }
 
 // 入力から実際の攻撃タイプを決定
@@ -1497,6 +1880,13 @@ function applyHit(attack, direction, hitType = 'normal') {
 
     // エフェクト（hitTypeを渡す）
     createHitEffect(sandbag.getPosition(), knockback, state.lastJustFrame, state.lastCounterHit, player.attackType === 'bat', hitType);
+    
+    // ヒット音を再生
+    playHitSound(knockback, hitType, player.attackType === 'bat');
+    
+    // コンボ音を再生
+    playComboSound(state.combo);
+    
     updateUI();
 }
 
@@ -2611,6 +3001,9 @@ function gameLoop(currentTime) {
 function showResult() {
     state.phase = 'result';
     resultScreen.classList.remove('hidden');
+    
+    // 結果表示音を再生
+    playResultSound(state.maxDistance);
 
     const distance = state.maxDistance;
 
@@ -2737,7 +3130,10 @@ function hideRanking() {
 
 // Start/Reset
 function startGame() {
-    state.phase = 'playing';
+    // オーディオを初期化（ユーザーインタラクション後に呼び出す必要がある）
+    initAudio();
+
+    state.phase = 'countdown';  // カウントダウンフェーズから開始
     state.timer = CONFIG.game.timeLimit;
     state.damage = 0;
     state.playerDamage = 0;
@@ -2801,6 +3197,47 @@ function startGame() {
     createPlayer(5, 5);
 
     updateUI();
+
+    // カウントダウン開始
+    startCountdown();
+}
+
+// カウントダウン処理
+function startCountdown() {
+    const overlay = document.getElementById('countdown-overlay');
+    const text = document.getElementById('countdown-text');
+    overlay.classList.remove('hidden');
+
+    let count = 2;
+    text.textContent = count;
+    // アニメーションをリセットするためにクラスを再適用
+    text.style.animation = 'none';
+    text.offsetHeight; // reflow
+    text.style.animation = '';
+    playCountdownSound(count);
+
+    const interval = setInterval(() => {
+        count--;
+        if (count > 0) {
+            text.textContent = count;
+            text.style.animation = 'none';
+            text.offsetHeight;
+            text.style.animation = '';
+            playCountdownSound(count);
+        } else if (count === 0) {
+            text.textContent = 'GO!';
+            text.style.animation = 'none';
+            text.offsetHeight;
+            text.style.animation = '';
+            playGoSound();
+            clearInterval(interval);
+            // GOの後は短い待ち時間でゲーム開始
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+                state.phase = 'playing';
+            }, 400);
+        }
+    }, 1000);
 }
 
 function resetGame() {
