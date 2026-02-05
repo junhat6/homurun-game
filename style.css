@@ -371,11 +371,31 @@ button.secondary:hover {
     align-items: center;
     color: #fff;
     z-index: 150;
+    padding: 20px;
+}
+
+.ranking-container {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+    max-width: 900px;
+    width: 100%;
+    justify-content: center;
+}
+
+.ranking-section {
+    flex: 1;
+    max-width: 420px;
+}
+
+.ranking-section h1,
+.ranking-section h2 {
+    text-align: center;
 }
 
 #ranking-screen h1 {
-    font-size: 36px;
-    margin-bottom: 20px;
+    font-size: 28px;
+    margin-bottom: 15px;
     color: #FFD700;
     text-shadow: 0 0 15px #FFD700;
 }
@@ -383,9 +403,9 @@ button.secondary:hover {
 #ranking-list {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 10px;
-    padding: 20px;
-    min-width: 400px;
-    max-height: 400px;
+    padding: 15px;
+    min-width: 320px;
+    max-height: 450px;
     overflow-y: auto;
 }
 
@@ -587,19 +607,27 @@ button.secondary:hover {
 
 /* Minus Ranking Styles */
 .minus-title {
-    font-size: 24px;
-    margin-top: 25px;
+    font-size: 28px;
+    margin-top: 0;
     margin-bottom: 15px;
     color: #ff6b6b;
     text-shadow: 0 0 15px #ff6b6b;
+}
+
+.minus-section {
+    display: flex;
+    flex-direction: column;
 }
 
 #minus-ranking-list {
     background: linear-gradient(135deg, rgba(255, 107, 107, 0.15), rgba(139, 0, 0, 0.1));
     border-radius: 10px;
     padding: 15px;
-    min-width: 400px;
+    min-width: 320px;
+    max-height: 450px;
+    overflow-y: auto;
     border: 1px solid rgba(255, 107, 107, 0.3);
+    flex: 1;
 }
 
 #minus-ranking-list .ranking-item {
@@ -630,4 +658,8 @@ button.secondary:hover {
     color: #ff6b6b;
     padding: 20px;
     font-size: 14px;
+}
+
+#closeRankingBtn {
+    margin-top: 25px;
 }

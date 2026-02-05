@@ -3985,7 +3985,6 @@ function showRanking() {
     limit(10)
   );
 
-  const minusRankIcons = ['🏴', '🟤', '🟣'];
   const minusRankClasses = ['minus-first', 'minus-second', 'minus-third'];
 
   unsubscribeMinusRanking = onSnapshot(minusQuery, (snapshot) => {
@@ -3995,7 +3994,7 @@ function showRanking() {
     const minusRecords = snapshot.docs
       .map(doc => ({ id: doc.id, ...doc.data() }))
       .filter(record => record.distance < 0)
-      .slice(0, 3);
+      .slice(0, 10);
 
     if (minusRecords.length === 0) {
       minusRankingList.innerHTML = '<div class="no-records">まだ誰も後ろに飛んでいません...</div>';
@@ -4004,7 +4003,7 @@ function showRanking() {
 
     minusRecords.forEach((record, index) => {
       const item = document.createElement('div');
-      item.className = 'ranking-item ' + minusRankClasses[index];
+      item.className = 'ranking-item ' + (minusRankClasses[index] || '');
 
       // Highlight own scores
       if (record.userId === currentUserId) {
@@ -4018,7 +4017,7 @@ function showRanking() {
       }
 
       item.innerHTML = `
-                <div class="rank-number">${minusRankIcons[index]}</div>
+                <div class="rank-number">${index + 1}</div>
                 <div class="rank-info">
                     <div class="rank-name">${escapeHtml(record.playerName || '名無し')}</div>
                     <div class="rank-distance minus">${record.distance.toFixed(2)}m</div>
