@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Homurun Contest - ホームランコンテスト</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div id="ui">
+            <div id="timer">Time: 10.0</div>
+            <div id="damage">Damage: 0%</div>
+            <div id="distance" class="hidden">Distance: 0.00m</div>
+        </div>
+        <div id="start-screen">
+            <h1>ホームランコンテスト</h1>
+            <p>サンドバッグを殴ってダメージを溜めろ！</p>
+            <p>最後にバットで吹っ飛ばせ！</p>
+            <div class="controls">
+                <p><kbd>A</kbd> / <kbd>←</kbd> : 左パンチ</p>
+                <p><kbd>D</kbd> / <kbd>→</kbd> : 右パンチ</p>
+                <p><kbd>SPACE</kbd> : バットスイング（吹っ飛ばし）</p>
+            </div>
+            <button id="startBtn">START</button>
+        </div>
+        <div id="result-screen" class="hidden">
+            <h1>結果発表</h1>
+            <div id="final-distance">0.00m</div>
+            <button id="retryBtn">RETRY</button>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/planck@latest/dist/planck.min.js"></script>
+    <script src="game.js"></script>
+</body>
+</html>
