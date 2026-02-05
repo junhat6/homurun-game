@@ -562,10 +562,10 @@ function getBackgroundTheme(distance) {
 }
 
 // 背景要素描画関数
-function drawBackgroundElements(cameraX, elements, distance, groundY) {
+function drawBackgroundElements(cameraX, elements, distance, groundY, cameraY = 0) {
   const parallaxFactor = 0.3;
   const baseX = cameraX * parallaxFactor;
-  
+
   elements.forEach(element => {
     switch(element) {
       case 'grass':
@@ -587,16 +587,16 @@ function drawBackgroundElements(cameraX, elements, distance, groundY) {
         drawConifers(baseX, groundY);
         break;
       case 'bigClouds':
-        drawBigClouds(cameraX);
+        drawBigClouds(cameraX, cameraY);
         break;
       case 'stars':
-        drawStars(cameraX);
+        drawStars(cameraX, cameraY);
         break;
       case 'moon':
-        drawMoon(cameraX);
+        drawMoon(cameraX, cameraY);
         break;
       case 'earth':
-        drawEarth(cameraX);
+        drawEarth(cameraX, cameraY);
         break;
     }
   });
@@ -763,76 +763,104 @@ function drawConifers(baseX, groundY) {
 }
 
 // 大きな雲を描画（高空）
-function drawBigClouds(cameraX) {
-  const cloudData = [
+function drawBigClouds(cameraX, cameraY = 0) {
+  // 基本の雲データ
+  const baseCloudData = [
     { x: 200, y: 400, size: 1.5 },
     { x: 500, y: 300, size: 2 },
     { x: 800, y: 450, size: 1.8 },
     { x: 1200, y: 350, size: 2.2 },
     { x: 1600, y: 420, size: 1.6 }
   ];
-  
+
+  // カメラが上に行くほど雲を追加で描画
+  const cloudData = [...baseCloudData];
+  const extraLayers = Math.ceil(cameraY / 300);
+  for (let layer = 1; layer <= extraLayers; layer++) {
+    baseCloudData.forEach((cloud, i) => {
+      cloudData.push({
+        x: cloud.x + layer * 100,
+        y: cloud.y - layer * 300,  // 上方向に追加
+        size: cloud.size * (0.8 + Math.random() * 0.4)
+      });
+    });
+  }
+
   const parallaxFactor = 0.2;
+  const parallaxFactorY = 0.1;
   const offsetX = (cameraX * parallaxFactor) % 2000;
-  
+  const offsetY = cameraY * parallaxFactorY;
+
   ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-  
+
   cloudData.forEach(cloud => {
     let screenX = cloud.x - offsetX;
     if (screenX < -200) screenX += 2000;
     if (screenX > CONFIG.canvas.width + 200) return;
-    
+
+    const screenY = cloud.y + offsetY;
     const size = cloud.size * 40;
-    
+
     // 複数の円で雲を構成
     ctx.beginPath();
-    ctx.arc(screenX, cloud.y, size, 0, Math.PI * 2);
-    ctx.arc(screenX - size * 0.6, cloud.y + size * 0.2, size * 0.7, 0, Math.PI * 2);
-    ctx.arc(screenX + size * 0.6, cloud.y + size * 0.2, size * 0.7, 0, Math.PI * 2);
-    ctx.arc(screenX - size * 0.3, cloud.y - size * 0.3, size * 0.6, 0, Math.PI * 2);
-    ctx.arc(screenX + size * 0.3, cloud.y - size * 0.3, size * 0.6, 0, Math.PI * 2);
+    ctx.arc(screenX, screenY, size, 0, Math.PI * 2);
+    ctx.arc(screenX - size * 0.6, screenY + size * 0.2, size * 0.7, 0, Math.PI * 2);
+    ctx.arc(screenX + size * 0.6, screenY + size * 0.2, size * 0.7, 0, Math.PI * 2);
+    ctx.arc(screenX - size * 0.3, screenY - size * 0.3, size * 0.6, 0, Math.PI * 2);
+    ctx.arc(screenX + size * 0.3, screenY - size * 0.3, size * 0.6, 0, Math.PI * 2);
     ctx.fill();
   });
 }
 
 // 星を描画（宇宙）
-function drawStars(cameraX) {
-  // 固定の星データ（シードベース）
-  const starCount = 100;
+function drawStars(cameraX, cameraY = 0) {
+  // カメラが上に行くほど星を多く描画
+  const baseStarCount = 100;
+  const extraStars = Math.floor(cameraY / 50);
+  const starCount = baseStarCount + extraStars;
   const parallaxFactor = 0.05;
+  const parallaxFactorY = 0.03;
   const offsetX = (cameraX * parallaxFactor) % 3000;
-  
+  const offsetY = cameraY * parallaxFactorY;
+
+  // 描画範囲をカメラYに応じて拡大
+  const yRange = CONFIG.canvas.height + cameraY * 1.5;
+
   ctx.fillStyle = '#FFFFFF';
-  
+
   for (let i = 0; i < starCount; i++) {
     // 疑似乱数でシード固定
     const seed = i * 12345;
     const x = ((seed * 9301 + 49297) % 233280) / 233280 * 3000;
-    const y = ((seed * 7621 + 35677) % 233280) / 233280 * (CONFIG.canvas.height * 0.8);
+    const y = ((seed * 7621 + 35677) % 233280) / 233280 * yRange - cameraY * 0.5;
     const size = ((seed * 4567 + 12345) % 233280) / 233280 * 2 + 0.5;
     const twinkle = Math.sin(Date.now() / 500 + i) * 0.3 + 0.7;
-    
+
     let screenX = x - offsetX;
     if (screenX < -10) screenX += 3000;
     if (screenX > CONFIG.canvas.width + 10) continue;
-    
+
+    const screenY = y + offsetY;
+
     ctx.globalAlpha = twinkle;
     ctx.beginPath();
-    ctx.arc(screenX, y, size, 0, Math.PI * 2);
+    ctx.arc(screenX, screenY, size, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.globalAlpha = 1;
 }
 
 // 月を描画
-function drawMoon(cameraX) {
+function drawMoon(cameraX, cameraY = 0) {
   const parallaxFactor = 0.02;
+  const parallaxFactorY = 0.05;
   const moonX = 700 - cameraX * parallaxFactor;
-  const moonY = 100;
+  // カメラが上に行くと月も相対的に下に移動（視差効果）
+  const moonY = 100 + cameraY * parallaxFactorY;
   const moonRadius = 50;
-  
+
   if (moonX < -moonRadius || moonX > CONFIG.canvas.width + moonRadius) return;
-  
+
   // 月の光
   const gradient = ctx.createRadialGradient(moonX, moonY, moonRadius * 0.8, moonX, moonY, moonRadius * 2);
   gradient.addColorStop(0, 'rgba(255, 255, 200, 0.3)');
@@ -841,13 +869,13 @@ function drawMoon(cameraX) {
   ctx.beginPath();
   ctx.arc(moonX, moonY, moonRadius * 2, 0, Math.PI * 2);
   ctx.fill();
-  
+
   // 月本体
   ctx.fillStyle = '#FFFACD';
   ctx.beginPath();
   ctx.arc(moonX, moonY, moonRadius, 0, Math.PI * 2);
   ctx.fill();
-  
+
   // クレーター
   ctx.fillStyle = 'rgba(200, 200, 180, 0.3)';
   ctx.beginPath();
@@ -862,18 +890,20 @@ function drawMoon(cameraX) {
 }
 
 // 地球を描画
-function drawEarth(cameraX) {
+function drawEarth(cameraX, cameraY = 0) {
   const parallaxFactor = 0.01;
+  const parallaxFactorY = 0.3;  // 地球は遠いのでY方向のパララックスは大きめ
   const earthX = 300 - cameraX * parallaxFactor;
-  const earthY = CONFIG.canvas.height - 80;
+  // カメラが上に行くと地球は相対的に下に大きく移動
+  const earthY = CONFIG.canvas.height - 80 + cameraY * parallaxFactorY;
   const earthRadius = 200;
-  
+
   // 地球の一部（下半分が見える）
   ctx.save();
   ctx.beginPath();
-  ctx.rect(0, 0, CONFIG.canvas.width, CONFIG.canvas.height);
+  ctx.rect(0, -cameraY, CONFIG.canvas.width, CONFIG.canvas.height + cameraY * 2);
   ctx.clip();
-  
+
   // 大気の光（グロー効果）
   const glowGradient = ctx.createRadialGradient(earthX, earthY, earthRadius * 0.9, earthX, earthY, earthRadius * 1.2);
   glowGradient.addColorStop(0, 'rgba(100, 180, 255, 0.4)');
@@ -882,13 +912,13 @@ function drawEarth(cameraX) {
   ctx.beginPath();
   ctx.arc(earthX, earthY, earthRadius * 1.2, 0, Math.PI * 2);
   ctx.fill();
-  
+
   // 地球本体（青い部分）
   ctx.fillStyle = '#1E90FF';
   ctx.beginPath();
   ctx.arc(earthX, earthY, earthRadius, 0, Math.PI * 2);
   ctx.fill();
-  
+
   // 大陸（緑）
   ctx.fillStyle = '#228B22';
   // 簡略化された大陸
@@ -898,7 +928,7 @@ function drawEarth(cameraX) {
   ctx.beginPath();
   ctx.ellipse(earthX + 60, earthY - 30, 35, 45, 0.2, 0, Math.PI * 2);
   ctx.fill();
-  
+
   // 雲
   ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
   ctx.beginPath();
@@ -907,7 +937,7 @@ function drawEarth(cameraX) {
   ctx.beginPath();
   ctx.ellipse(earthX + 50, earthY - 50, 30, 10, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  
+
   ctx.restore();
 }
 
@@ -2984,7 +3014,7 @@ function drawBackground(cameraX, cameraY = 0) {
   const groundY = CONFIG.canvas.height - CONFIG.physics.scale;
 
   // 背景要素を描画
-  drawBackgroundElements(cameraX, theme.elements, distance, groundY);
+  drawBackgroundElements(cameraX, theme.elements, distance, groundY, cameraY);
 
   // 地面を描画（地面がある場合のみ）
   if (theme.ground) {
