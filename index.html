@@ -11,23 +11,41 @@
         <canvas id="gameCanvas"></canvas>
         <div id="ui">
             <div id="timer">Time: 10.0</div>
-            <div id="damage">Damage: 0%</div>
-            <div id="distance" class="hidden">Distance: 0.00m</div>
+            <div id="damage">0%</div>
+            <div id="combo" class="hidden">0 COMBO</div>
+            <div id="distance" class="hidden">0.00m</div>
+        </div>
+        <div id="controls-ui">
+            <div class="control-hint">
+                <span class="key">A/D</span> Move
+                <span class="key">W/SPACE</span> Jump
+                <span class="key">J</span> Weak
+                <span class="key">K</span> Strong
+                <span class="key">L</span> Smash
+                <span class="key">B</span> Bat
+            </div>
+        </div>
+        <div id="charge-bar" class="hidden">
+            <div id="charge-fill"></div>
         </div>
         <div id="start-screen">
             <h1>ホームランコンテスト</h1>
-            <p>サンドバッグを殴ってダメージを溜めろ！</p>
-            <p>最後にバットで吹っ飛ばせ！</p>
+            <p>坪内先生を吹っ飛ばせ！</p>
             <div class="controls">
-                <p><kbd>A</kbd> / <kbd>←</kbd> : 左パンチ</p>
-                <p><kbd>D</kbd> / <kbd>→</kbd> : 右パンチ</p>
-                <p><kbd>SPACE</kbd> : バットスイング（吹っ飛ばし）</p>
+                <h3>操作方法</h3>
+                <p><kbd>A</kbd> <kbd>D</kbd> : 移動</p>
+                <p><kbd>W</kbd> / <kbd>SPACE</kbd> : ジャンプ</p>
+                <p><kbd>J</kbd> : 弱攻撃（速い・コンボ始動）</p>
+                <p><kbd>K</kbd> : 強攻撃（中ダメージ）</p>
+                <p><kbd>L</kbd> : スマッシュ（長押しで溜め）</p>
+                <p><kbd>B</kbd> : バットスイング（最終打撃）</p>
             </div>
             <button id="startBtn">START</button>
         </div>
         <div id="result-screen" class="hidden">
             <h1>結果発表</h1>
             <div id="final-distance">0.00m</div>
+            <div id="max-combo">Max Combo: 0</div>
             <button id="retryBtn">RETRY</button>
         </div>
     </div>

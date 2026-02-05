@@ -34,10 +34,11 @@ body {
     right: 10px;
     display: flex;
     justify-content: space-between;
+    align-items: flex-start;
     padding: 0 20px;
 }
 
-#timer, #damage, #distance {
+#timer, #damage, #distance, #combo {
     font-size: 24px;
     font-weight: bold;
     color: #fff;
@@ -52,7 +53,20 @@ body {
 }
 
 #damage {
+    font-size: 36px;
     color: #ffd93d;
+    min-width: 100px;
+    text-align: center;
+}
+
+#combo {
+    color: #ff4757;
+    animation: comboPulse 0.3s ease-out;
+}
+
+@keyframes comboPulse {
+    0% { transform: scale(1.3); }
+    100% { transform: scale(1); }
 }
 
 #distance {
@@ -61,6 +75,56 @@ body {
 
 .hidden {
     display: none !important;
+}
+
+/* Controls UI */
+#controls-ui {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
+}
+
+.control-hint {
+    background: rgba(0, 0, 0, 0.6);
+    padding: 8px 15px;
+    border-radius: 8px;
+    color: #aaa;
+    font-size: 12px;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.control-hint .key {
+    background: #444;
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: #fff;
+    font-family: monospace;
+    margin-right: 3px;
+}
+
+/* Charge Bar */
+#charge-bar {
+    position: absolute;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 200px;
+    height: 20px;
+    background: rgba(0, 0, 0, 0.7);
+    border: 2px solid #fff;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+#charge-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ffd93d, #ff6b6b, #ff0000);
+    transition: width 0.05s linear;
 }
 
 /* Start Screen */
@@ -86,9 +150,9 @@ body {
 }
 
 #start-screen p {
-    font-size: 18px;
+    font-size: 20px;
     margin-bottom: 10px;
-    color: #ccc;
+    color: #ffd93d;
 }
 
 .controls {
@@ -96,11 +160,19 @@ body {
     padding: 20px 40px;
     border-radius: 10px;
     margin: 20px 0;
+    text-align: left;
+}
+
+.controls h3 {
+    text-align: center;
+    margin-bottom: 15px;
+    color: #4a90d9;
 }
 
 .controls p {
-    margin: 10px 0;
+    margin: 8px 0;
     font-size: 16px;
+    color: #ccc;
 }
 
 kbd {
@@ -110,6 +182,9 @@ kbd {
     border: 1px solid #555;
     font-family: monospace;
     font-size: 14px;
+    min-width: 30px;
+    display: inline-block;
+    text-align: center;
 }
 
 button {
@@ -142,23 +217,20 @@ button:active {
     margin: 20px 0;
 }
 
-/* Damage indicator animation */
-@keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    75% { transform: translateX(5px); }
+#max-combo {
+    font-size: 24px;
+    color: #ff4757;
+    margin-bottom: 10px;
 }
 
-.shake {
-    animation: shake 0.1s ease-in-out;
+/* Hit Effects */
+@keyframes hitEffect {
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(2); }
 }
 
-/* Hit effect */
-@keyframes hitFlash {
-    0% { filter: brightness(2); }
-    100% { filter: brightness(1); }
-}
-
-.hit-flash {
-    animation: hitFlash 0.1s ease-out;
+.hit-effect {
+    position: absolute;
+    pointer-events: none;
+    animation: hitEffect 0.3s ease-out forwards;
 }
