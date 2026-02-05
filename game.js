@@ -14,10 +14,14 @@ const CONFIG = {
         width: 0.8,
         height: 1.5,
         speed: 8,
-        jumpForce: 20,  // 重力強化に合わせて調整
+        runSpeed: 12,           // ダッシュ速度
+        jumpForce: 20,
+        shortHopForce: 12,      // ショートホップ
         maxJumps: 2,
-        airDashSpeed: 12,
-        airDashDuration: 0.15
+        airSpeed: 6,            // 空中横移動速度
+        airDashSpeed: 15,
+        airDashDuration: 0.12,
+        pivotWindow: 0.1        // ピボット入力猶予
     },
 
     sandbag: {
@@ -41,25 +45,39 @@ const CONFIG = {
 
     // コンボシステム
     combo: {
-        // コンボボーナス（ダメージ増加！）
         bonus: {
-            perHit: 0.08,       // 1ヒットごとのボーナス増加
-            maximum: 1.8        // 最大倍率
+            perHit: 0.08,
+            maximum: 1.8
         },
         stale: {
-            queueSize: 6,       // ステールキュー
-            penalty: 0.08,      // 1回あたりのペナルティ
-            minimum: 0.4        // 最低倍率
+            queueSize: 6,
+            penalty: 0.08,
+            minimum: 0.4
         },
         justFrame: {
-            window: 0.08,       // ジャストフレームの猶予（秒）
-            bonus: 1.3          // ジャストフレームボーナス
+            window: 0.08,
+            bonus: 1.3
         },
         counterHit: {
             damageMultiplier: 1.5,
             knockbackMultiplier: 1.3,
             hitstunMultiplier: 1.5
         }
+    },
+
+    // スイートスポット/サワースポット
+    sweetspot: {
+        threshold: 0.7,         // 範囲の70%以上でスイートスポット
+        damageMultiplier: 1.2,
+        knockbackMultiplier: 1.15,
+        sourDamageMultiplier: 0.7,
+        sourKnockbackMultiplier: 0.6
+    },
+
+    // 角度調整（攻撃時の方向入力）
+    angleInfluence: {
+        up: 8,                  // 上入力で+8度
+        down: -8                // 下入力で-8度
     },
 
     // Rage（怒り）システム
@@ -72,263 +90,302 @@ const CONFIG = {
 
     attacks: {
         // ============ 地上技 ============
-        // 弱攻撃 - 連打用、キャンセル可能
+        // 弱攻撃1 - 発生が早い、コンボ始動
         weak: {
-            damage: 3,
-            baseKnockback: 8,
-            knockbackGrowth: 0.6,
-            angle: 40,
-            startup: 0.03,
-            active: 0.08,
-            recovery: 0.05,
-            range: 1.2,
-            hitstop: 0.03,
+            damage: 2.5,
+            baseKnockback: 6,
+            knockbackGrowth: 0.3,
+            angle: 70,              // やや上に飛ばしてコンボ継続
+            startup: 0.033,         // 2F
+            active: 0.05,           // 3F
+            recovery: 0.083,        // 5F (全体13F)
+            range: 1.0,
+            hitstop: 0.033,
             cancelable: ['weak2', 'strong', 'upperStrong', 'downStrong', 'jump'],
-            landingLag: 0.05,
-            hitboxDir: 'forward'
+            landingLag: 0.067,
+            hitboxDir: 'forward',
+            canAngle: false
         },
         // 弱攻撃2段目
         weak2: {
-            damage: 3,
-            baseKnockback: 10,
-            knockbackGrowth: 0.7,
-            angle: 50,
-            startup: 0.03,
-            active: 0.08,
-            recovery: 0.06,
-            range: 1.3,
-            hitstop: 0.04,
+            damage: 2.5,
+            baseKnockback: 8,
+            knockbackGrowth: 0.35,
+            angle: 72,
+            startup: 0.033,
+            active: 0.05,
+            recovery: 0.1,
+            range: 1.1,
+            hitstop: 0.033,
             cancelable: ['weak3', 'strong', 'upperStrong', 'jump'],
-            landingLag: 0.05,
-            hitboxDir: 'forward'
+            landingLag: 0.067,
+            hitboxDir: 'forward',
+            canAngle: false
         },
-        // 弱攻撃3段目（フィニッシュ）
+        // 弱攻撃3段目（フィニッシュブロー）
         weak3: {
-            damage: 5,
-            baseKnockback: 18,
-            knockbackGrowth: 1.0,
-            angle: 45,
-            startup: 0.04,
-            active: 0.1,
-            recovery: 0.12,
-            range: 1.5,
-            hitstop: 0.06,
+            damage: 4,
+            baseKnockback: 40,
+            knockbackGrowth: 0.8,
+            angle: 50,              // 斜め上に飛ばす
+            startup: 0.067,         // 4F
+            active: 0.067,
+            recovery: 0.2,          // 後隙大きめ
+            range: 1.4,
+            hitstop: 0.067,
             cancelable: [],
-            landingLag: 0.08,
-            hitboxDir: 'forward'
+            landingLag: 0.1,
+            hitboxDir: 'forward',
+            hasSweetspot: true,     // 先端が強い
+            canAngle: true
         },
-        // 横強攻撃
+        // 横強攻撃 - 角度調整可能、リーチ長め
         strong: {
             damage: 8,
-            baseKnockback: 16,
-            knockbackGrowth: 1.1,
-            angle: 35,
-            startup: 0.06,
-            active: 0.1,
-            recovery: 0.1,
-            range: 1.8,
-            hitstop: 0.06,
-            cancelable: ['smash', 'jump'],
-            landingLag: 0.1,
-            hitboxDir: 'forward'
-        },
-        // 上強 - ランチャー（浮かせ技）強化！
-        upperStrong: {
-            damage: 9,
-            baseKnockback: 45,      // 大幅強化
-            knockbackGrowth: 1.3,
-            angle: 88,              // ほぼ真上
-            startup: 0.05,
-            active: 0.12,
-            recovery: 0.12,
-            range: 2.0,             // 範囲拡大
-            hitstop: 0.08,
+            baseKnockback: 20,
+            knockbackGrowth: 0.9,
+            angle: 35,              // 横に飛ばす
+            startup: 0.083,         // 5F
+            active: 0.083,
+            recovery: 0.167,        // 後隙10F
+            range: 2.0,
+            hitstop: 0.067,
             cancelable: ['jump'],
-            landingLag: 0.08,
-            hitboxDir: 'up'         // 上方向ヒットボックス
+            landingLag: 0.1,
+            hitboxDir: 'forward',
+            hasSweetspot: true,
+            canAngle: true          // 上下で角度変更可能
         },
-        // 下強 - 足払い
+        // 上強 - ジャグリング用、お手玉の起点
+        upperStrong: {
+            damage: 7,
+            baseKnockback: 35,
+            knockbackGrowth: 1.0,
+            angle: 88,              // ほぼ真上
+            startup: 0.067,         // 4F
+            active: 0.1,
+            recovery: 0.183,        // 後隙11F
+            range: 1.8,
+            hitstop: 0.067,
+            cancelable: ['jump'],
+            landingLag: 0.083,
+            hitboxDir: 'up',
+            hasSweetspot: false,
+            canAngle: false
+        },
+        // 下強 - 低姿勢、低角度で飛ばす
         downStrong: {
             damage: 6,
-            baseKnockback: 12,
-            knockbackGrowth: 0.8,
-            angle: 25,              // 低い角度
-            startup: 0.04,
+            baseKnockback: 15,
+            knockbackGrowth: 0.7,
+            angle: 20,              // 低角度（テクニカル）
+            startup: 0.05,          // 3F 発生早い
             active: 0.1,
-            recovery: 0.08,
-            range: 1.6,
-            hitstop: 0.04,
-            cancelable: ['strong', 'upperStrong', 'jump'],
-            landingLag: 0.06,
-            hitboxDir: 'forward'
-        },
-        // スマッシュ - フィニッシャー
-        smash: {
-            damage: 15,
-            maxDamage: 30,
-            baseKnockback: 35,
-            maxBaseKnockback: 60,
-            knockbackGrowth: 1.8,
-            maxKnockbackGrowth: 2.8,
-            angle: 42,
-            startup: 0.1,
-            active: 0.12,
-            recovery: 0.18,
-            range: 2.0,
-            hitstop: 0.12,
-            chargeTime: 1.5,
-            cancelable: [],
-            landingLag: 0.2,
-            hitboxDir: 'forward'
-        },
-        // 上スマッシュ
-        upSmash: {
-            damage: 14,
-            maxDamage: 26,
-            baseKnockback: 40,
-            maxBaseKnockback: 70,
-            knockbackGrowth: 1.6,
-            maxKnockbackGrowth: 2.4,
-            angle: 85,
-            startup: 0.08,
-            active: 0.15,
-            recovery: 0.2,
-            range: 2.2,
-            hitstop: 0.1,
-            chargeTime: 1.5,
-            cancelable: [],
-            landingLag: 0.2,
-            hitboxDir: 'up'
-        },
-        // 下スマッシュ（両側攻撃）
-        downSmash: {
-            damage: 13,
-            maxDamage: 24,
-            baseKnockback: 28,
-            maxBaseKnockback: 50,
-            knockbackGrowth: 1.5,
-            maxKnockbackGrowth: 2.2,
-            angle: 25,              // 低い角度で吹っ飛ばす
-            startup: 0.06,
-            active: 0.18,
-            recovery: 0.22,
-            range: 2.0,
-            hitstop: 0.1,
-            chargeTime: 1.5,
-            cancelable: [],
-            landingLag: 0.2,
-            hitboxDir: 'around'     // 両側
-        },
-        // ダッシュ攻撃
-        dashAttack: {
-            damage: 10,
-            baseKnockback: 20,
-            knockbackGrowth: 1.1,
-            angle: 55,
-            startup: 0.04,
-            active: 0.15,
-            recovery: 0.15,
-            range: 1.8,
-            hitstop: 0.07,
-            cancelable: [],
-            landingLag: 0.1,
-            hitboxDir: 'forward'
-        },
-        // ============ 空中技 ============
-        // 空中N攻撃（ニュートラル）
-        nair: {
-            damage: 7,
-            baseKnockback: 14,
-            knockbackGrowth: 0.9,
-            angle: 50,
-            startup: 0.04,
-            active: 0.15,
-            recovery: 0.1,
+            recovery: 0.133,
             range: 1.8,
             hitstop: 0.05,
-            cancelable: [],
-            landingLag: 0.08,
-            hitboxDir: 'around'     // 周囲
+            cancelable: ['strong', 'upperStrong', 'dashAttack', 'jump'],
+            landingLag: 0.083,
+            hitboxDir: 'forward',
+            hasSweetspot: true,
+            canAngle: false,
+            sendAwayOnSourspot: true  // 根本当てで自分から離す
         },
-        // 空中前攻撃
+        // 横スマッシュ - メインフィニッシャー、後隙大
+        smash: {
+            damage: 14,
+            maxDamage: 22,
+            baseKnockback: 30,
+            maxBaseKnockback: 45,
+            knockbackGrowth: 1.6,
+            maxKnockbackGrowth: 2.2,
+            angle: 40,
+            startup: 0.183,         // 11F 発生遅め
+            active: 0.067,          // 4F
+            recovery: 0.35,         // 後隙21F かなり大きい
+            range: 2.2,
+            hitstop: 0.133,
+            chargeTime: 1.0,
+            cancelable: [],
+            landingLag: 0.25,
+            hitboxDir: 'forward',
+            hasSweetspot: true,
+            canAngle: true
+        },
+        // 上スマッシュ - 対空、コンボフィニッシュ
+        upSmash: {
+            damage: 13,
+            maxDamage: 20,
+            baseKnockback: 35,
+            maxBaseKnockback: 55,
+            knockbackGrowth: 1.4,
+            maxKnockbackGrowth: 2.0,
+            angle: 85,
+            startup: 0.133,         // 8F
+            active: 0.117,          // 7F 持続長め
+            recovery: 0.333,        // 後隙20F
+            range: 2.4,
+            hitstop: 0.117,
+            chargeTime: 1.0,
+            cancelable: [],
+            landingLag: 0.25,
+            hitboxDir: 'up',
+            hasSweetspot: true,     // 出始めが強い
+            canAngle: false
+        },
+        // 下スマッシュ - 両側攻撃、低角度
+        downSmash: {
+            damage: 12,
+            maxDamage: 18,
+            baseKnockback: 25,
+            maxBaseKnockback: 40,
+            knockbackGrowth: 1.3,
+            maxKnockbackGrowth: 1.8,
+            angle: 28,              // 低角度
+            startup: 0.1,           // 6F
+            active: 0.15,
+            recovery: 0.367,        // 後隙22F
+            range: 2.0,
+            hitstop: 0.1,
+            chargeTime: 1.0,
+            cancelable: [],
+            landingLag: 0.25,
+            hitboxDir: 'around',
+            hasSweetspot: false,
+            canAngle: false
+        },
+        // ダッシュ攻撃 - 突進、中ダメージ
+        dashAttack: {
+            damage: 9,
+            baseKnockback: 60,      // ある程度飛ばす
+            knockbackGrowth: 0.8,
+            angle: 50,              // やや上
+            startup: 0.067,         // 4F
+            active: 0.117,
+            recovery: 0.233,        // 後隙14F
+            range: 1.6,
+            hitstop: 0.083,
+            cancelable: [],
+            landingLag: 0.117,
+            hitboxDir: 'forward',
+            hasSweetspot: true,     // 出始めが強い
+            canAngle: false,
+            momentum: true          // 移動しながら攻撃
+        },
+        // ============ 空中技 ============
+        // 空N - 持続長い、暴れ用
+        nair: {
+            damage: 6,
+            baseKnockback: 18,
+            knockbackGrowth: 0.7,
+            angle: 45,
+            startup: 0.05,          // 3F
+            active: 0.2,            // 12F 持続長い
+            recovery: 0.117,
+            range: 1.6,
+            hitstop: 0.05,
+            cancelable: [],
+            landingLag: 0.1,        // 6F
+            autocancel: { early: 0.05, late: 0.3 },  // オートキャンセル
+            hitboxDir: 'around',
+            hasSweetspot: false,
+            canAngle: false
+        },
+        // 空前 - メイン空中攻撃、コンボパーツ
         fair: {
             damage: 9,
-            baseKnockback: 18,
-            knockbackGrowth: 1.2,
+            baseKnockback: 15,
+            knockbackGrowth: 1.0,
             angle: 40,
-            startup: 0.06,
-            active: 0.1,
-            recovery: 0.12,
-            range: 1.6,
-            hitstop: 0.07,
-            cancelable: [],
-            landingLag: 0.1,
-            hitboxDir: 'forward'
-        },
-        // 空中後攻撃（強力）
-        bair: {
-            damage: 12,
-            baseKnockback: 22,
-            knockbackGrowth: 1.4,
-            angle: 35,
-            startup: 0.08,
-            active: 0.08,
-            recovery: 0.15,
-            range: 1.5,
-            hitstop: 0.1,
-            cancelable: [],
-            landingLag: 0.12,
-            hitboxDir: 'back'
-        },
-        // 空中上攻撃
-        uair: {
-            damage: 8,
-            baseKnockback: 20,
-            knockbackGrowth: 1.1,
-            angle: 80,
-            startup: 0.05,
-            active: 0.12,
-            recovery: 0.1,
+            startup: 0.1,           // 6F
+            active: 0.067,
+            recovery: 0.167,
             range: 1.8,
-            hitstop: 0.06,
+            hitstop: 0.083,
             cancelable: [],
-            landingLag: 0.08,
-            hitboxDir: 'up'
+            landingLag: 0.133,      // 8F
+            autocancel: { early: 0.067, late: 0.283 },
+            hitboxDir: 'forward',
+            hasSweetspot: true,
+            canAngle: true
         },
-        // 空中下攻撃（メテオ）強化！
-        dair: {
-            damage: 13,
-            baseKnockback: 30,      // 強化
+        // 空後 - 最強の空中技！スイートスポット重要
+        bair: {
+            damage: 14,
+            baseKnockback: 20,
             knockbackGrowth: 1.5,
-            angle: -75,             // 真下に近い
-            startup: 0.1,
-            active: 0.12,           // 持続延長
-            recovery: 0.2,
-            range: 2.0,             // 範囲拡大
-            hitstop: 0.18,
+            angle: 35,              // 横に強く飛ばす
+            startup: 0.117,         // 7F
+            active: 0.05,           // 3F 持続短い
+            recovery: 0.217,        // 後隙13F
+            range: 1.6,
+            hitstop: 0.133,
             cancelable: [],
-            landingLag: 0.2,
-            hitboxDir: 'down',
-            isMeteor: true
+            landingLag: 0.167,      // 10F 着地隙大きめ
+            autocancel: { early: 0.05, late: 0.317 },
+            hitboxDir: 'back',
+            hasSweetspot: true,     // 先端が超強力
+            sweetspotMultiplier: 1.3,  // 空後専用の強化倍率
+            canAngle: false
         },
-        // バット - 最終兵器（溜め可能！）
-        bat: {
-            damage: 35,
-            maxDamage: 50,           // 最大溜めダメージ
-            baseKnockback: 200,
-            maxBaseKnockback: 350,   // 最大溜めノックバック
-            knockbackGrowth: 3.5,
-            maxKnockbackGrowth: 5.0, // 最大溜め成長率
-            angle: 45,
-            startup: 0.15,
-            active: 0.2,
-            recovery: 0.4,
-            range: 3.0,
-            hitstop: 0.3,
-            chargeTime: 2.0,         // 溜め時間
+        // 空上 - お手玉用、持続と範囲
+        uair: {
+            damage: 7,
+            baseKnockback: 16,
+            knockbackGrowth: 0.9,
+            angle: 80,
+            startup: 0.067,         // 4F
+            active: 0.117,          // 7F
+            recovery: 0.133,
+            range: 2.0,
+            hitstop: 0.067,
             cancelable: [],
-            landingLag: 0.3,
-            hitboxDir: 'forward'
+            landingLag: 0.1,        // 6F
+            autocancel: { early: 0.05, late: 0.267 },
+            hitboxDir: 'up',
+            hasSweetspot: false,
+            canAngle: false
+        },
+        // 空下 - メテオ！リスク大、リターン大
+        dair: {
+            damage: 12,
+            baseKnockback: 20,
+            knockbackGrowth: 1.4,
+            angle: -80,             // ほぼ真下
+            startup: 0.183,         // 11F 発生遅い
+            active: 0.083,          // 5F
+            recovery: 0.267,        // 後隙16F
+            range: 1.8,
+            hitstop: 0.2,
+            cancelable: [],
+            landingLag: 0.267,      // 16F 着地隙大
+            autocancel: { early: 0, late: 0.45 },  // ほぼオートキャンセル不可
+            hitboxDir: 'down',
+            hasSweetspot: true,     // 中心がメテオ
+            isMeteor: true,
+            canAngle: false
+        },
+        // バット - 最終兵器
+        bat: {
+            damage: 30,
+            maxDamage: 45,
+            baseKnockback: 150,
+            maxBaseKnockback: 280,
+            knockbackGrowth: 3.0,
+            maxKnockbackGrowth: 4.5,
+            angle: 45,
+            startup: 0.233,         // 14F
+            active: 0.133,          // 8F
+            recovery: 0.5,          // 後隙30F 非常に大きい
+            range: 2.8,
+            hitstop: 0.333,
+            chargeTime: 2.0,
+            cancelable: [],
+            landingLag: 0.333,
+            hitboxDir: 'forward',
+            hasSweetspot: true,
+            sweetspotMultiplier: 1.25,
+            canAngle: true
         }
     }
 };
@@ -352,8 +409,12 @@ const state = {
     staleQueue: [],     // ステールキュー
     lastJustFrame: false,
     lastCounterHit: false,
+    lastSweetspot: false,   // スイートスポットヒット
+    lastSourspot: false,    // サワースポットヒット
     totalDamageDealt: 0,
-    comboProration: 1.0
+    comboProration: 1.0,
+    dismembered: false,  // バラバラになったかどうか
+    farthestPart: null   // 一番遠くに飛んだパーツ
 };
 
 // Canvas Setup
@@ -383,6 +444,11 @@ const closeRankingBtn = document.getElementById('closeRankingBtn');
 // Physics
 let world, ground, platform, sandbag, playerBody;
 
+// Body Parts System (Happy Wheels style dismemberment)
+let bodyParts = [];  // 体のバラバラになったパーツ
+let bloodEffects = [];  // 血しぶきエフェクト
+let bloodPools = [];  // 地面の血だまり
+
 // Player State
 const player = {
     facingRight: true,
@@ -392,6 +458,7 @@ const player = {
     attackType: null,
     attackPhase: null,
     attackTimer: 0,
+    attackTotalTime: 0,     // 攻撃の総経過時間（オートキャンセル用）
     charging: false,
     chargeAmount: 0,
     canAttack: true,
@@ -400,7 +467,18 @@ const player = {
     canAirDash: true,
     lastAttackHit: false,
     cancelWindow: false,
-    landingLag: 0
+    landingLag: 0,
+    // 新しい移動系
+    running: false,         // ダッシュ中か
+    runTimer: 0,
+    pivotTimer: 0,          // ピボット入力タイマー
+    lastMoveDir: 0,         // 最後の移動方向
+    jumpHeld: false,        // ジャンプボタン長押し判定
+    jumpHeldTime: 0,        // ジャンプボタン押し時間
+    shortHopWindow: 0.083,  // 5Fでショートホップ判定
+    // RAR (Reverse Aerial Rush)
+    turnaroundTimer: 0,
+    wantsTurnaround: false
 };
 
 // Input State
@@ -411,6 +489,7 @@ const input = {
     down: false,
     jump: false,
     jumpPressed: false,
+    jumpReleased: false,    // ショートホップ判定用
     weak: false,
     weakPressed: false,
     strong: false,
@@ -419,7 +498,10 @@ const input = {
     smashReleased: false,
     bat: false,
     airDash: false,
-    airDashPressed: false
+    airDashPressed: false,
+    // 方向入力の履歴（ピボット用）
+    lastHorizontal: 0,
+    horizontalTime: 0
 };
 
 // Images
@@ -491,6 +573,485 @@ function createPlayer(x, y) {
         density: 1.0,
         friction: 0.3
     });
+}
+
+// ============================================
+// Happy Wheels Style Dismemberment System
+// ============================================
+
+// 体パーツの定義
+const BODY_PART_TYPES = {
+    head: {
+        name: '頭',
+        width: 0.8,
+        height: 0.8,
+        color: '#FFE0BD',
+        offsetX: 0,
+        offsetY: 1.2,
+        mass: 0.8,
+        gore: true,
+        eyes: true
+    },
+    torso: {
+        name: '胴体',
+        width: 1.0,
+        height: 1.2,
+        color: '#FFD93D',
+        offsetX: 0,
+        offsetY: 0,
+        mass: 2.0,
+        gore: true
+    },
+    leftArm: {
+        name: '左腕',
+        width: 0.3,
+        height: 0.8,
+        color: '#FFE0BD',
+        offsetX: -0.8,
+        offsetY: 0.4,
+        mass: 0.5,
+        gore: true
+    },
+    rightArm: {
+        name: '右腕',
+        width: 0.3,
+        height: 0.8,
+        color: '#FFE0BD',
+        offsetX: 0.8,
+        offsetY: 0.4,
+        mass: 0.5,
+        gore: true
+    },
+    leftLeg: {
+        name: '左脚',
+        width: 0.35,
+        height: 1.0,
+        color: '#4A4A4A',
+        offsetX: -0.4,
+        offsetY: -1.0,
+        mass: 0.7,
+        gore: true
+    },
+    rightLeg: {
+        name: '右脚',
+        width: 0.35,
+        height: 1.0,
+        color: '#4A4A4A',
+        offsetX: 0.4,
+        offsetY: -1.0,
+        mass: 0.7,
+        gore: true
+    },
+    intestines: {
+        name: '内臓',
+        width: 0.5,
+        height: 0.4,
+        color: '#8B0000',
+        offsetX: 0,
+        offsetY: -0.3,
+        mass: 0.3,
+        gore: true,
+        isGore: true
+    }
+};
+
+// サンドバッグをバラバラにする
+function dismemberSandbag() {
+    if (!sandbag || state.dismembered) return;
+
+    const pos = sandbag.getPosition();
+    const vel = sandbag.getLinearVelocity();
+    const angle = sandbag.getAngle();
+    const angVel = sandbag.getAngularVelocity();
+
+    // 衝撃の強さに応じて飛び散り方を変える
+    const impactForce = vel.length();
+    const explosionMultiplier = Math.min(3, 1 + impactForce * 0.05);
+
+    // 大量の血しぶきを生成
+    for (let i = 0; i < 50; i++) {
+        createBloodSplatter(pos.x, pos.y, vel.x * 0.3, vel.y * 0.3, explosionMultiplier);
+    }
+
+    // 体のパーツを生成
+    for (const [partType, partDef] of Object.entries(BODY_PART_TYPES)) {
+        const partX = pos.x + partDef.offsetX * Math.cos(angle) - partDef.offsetY * Math.sin(angle);
+        const partY = pos.y + partDef.offsetX * Math.sin(angle) + partDef.offsetY * Math.cos(angle);
+
+        // ランダムな飛び散り速度
+        const spreadAngle = Math.random() * Math.PI * 2;
+        const spreadForce = (5 + Math.random() * 15) * explosionMultiplier;
+        const partVelX = vel.x * 0.5 + Math.cos(spreadAngle) * spreadForce;
+        const partVelY = vel.y * 0.5 + Math.sin(spreadAngle) * spreadForce + 5;
+
+        createBodyPart(partType, partDef, partX, partY, partVelX, partVelY, angle, angVel);
+    }
+
+    // 追加の肉片を生成
+    for (let i = 0; i < 8; i++) {
+        const goreX = pos.x + (Math.random() - 0.5) * 2;
+        const goreY = pos.y + (Math.random() - 0.5) * 2;
+        const spreadAngle = Math.random() * Math.PI * 2;
+        const spreadForce = (3 + Math.random() * 20) * explosionMultiplier;
+        createGorePiece(goreX, goreY,
+            vel.x * 0.3 + Math.cos(spreadAngle) * spreadForce,
+            vel.y * 0.3 + Math.sin(spreadAngle) * spreadForce + 3
+        );
+    }
+
+    // サンドバッグを削除
+    world.destroyBody(sandbag);
+    sandbag = null;
+    state.dismembered = true;
+
+    // 画面を揺らす
+    state.screenShake = 0.5;
+}
+
+// 体パーツを生成
+function createBodyPart(partType, partDef, x, y, velX, velY, angle, angVel) {
+    const body = world.createBody({
+        type: 'dynamic',
+        position: Vec2(x, y),
+        angle: angle + (Math.random() - 0.5) * 0.5,
+        linearDamping: 0.1,
+        angularDamping: 0.3,
+        fixedRotation: false
+    });
+
+    body.createFixture({
+        shape: new Box(partDef.width / 2, partDef.height / 2),
+        density: partDef.mass / (partDef.width * partDef.height),
+        friction: 0.5,
+        restitution: 0.3
+    });
+
+    body.setLinearVelocity(Vec2(velX, velY));
+    body.setAngularVelocity(angVel + (Math.random() - 0.5) * 10);
+
+    const part = {
+        body: body,
+        type: partType,
+        def: partDef,
+        startX: sandbag ? sandbag.startX : 8,
+        bleeding: partDef.gore,
+        bleedTimer: 0,
+        settled: false,
+        trailPoints: []
+    };
+
+    bodyParts.push(part);
+    body.setUserData({ type: 'bodyPart', part: part });
+}
+
+// 追加の肉片を生成
+function createGorePiece(x, y, velX, velY) {
+    const size = 0.15 + Math.random() * 0.25;
+    const body = world.createBody({
+        type: 'dynamic',
+        position: Vec2(x, y),
+        angle: Math.random() * Math.PI * 2,
+        linearDamping: 0.1,
+        angularDamping: 0.5,
+        fixedRotation: false
+    });
+
+    body.createFixture({
+        shape: new Box(size / 2, size / 2),
+        density: 0.5,
+        friction: 0.6,
+        restitution: 0.2
+    });
+
+    body.setLinearVelocity(Vec2(velX, velY));
+    body.setAngularVelocity((Math.random() - 0.5) * 20);
+
+    const part = {
+        body: body,
+        type: 'gore',
+        def: {
+            name: '肉片',
+            width: size,
+            height: size,
+            color: ['#8B0000', '#A52A2A', '#800000', '#660000'][Math.floor(Math.random() * 4)],
+            isGore: true
+        },
+        startX: sandbag ? sandbag.startX : 8,
+        bleeding: true,
+        bleedTimer: 0,
+        settled: false,
+        trailPoints: []
+    };
+
+    bodyParts.push(part);
+    body.setUserData({ type: 'bodyPart', part: part });
+}
+
+// 血しぶきを生成
+function createBloodSplatter(x, y, baseVelX, baseVelY, multiplier = 1) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = (2 + Math.random() * 8) * multiplier;
+
+    bloodEffects.push({
+        x: x,
+        y: y,
+        velX: baseVelX + Math.cos(angle) * speed,
+        velY: baseVelY + Math.sin(angle) * speed + 2,
+        size: 2 + Math.random() * 6,
+        life: 1.0,
+        color: ['#8B0000', '#A52A2A', '#800000', '#B22222', '#DC143C'][Math.floor(Math.random() * 5)],
+        gravity: -25 - Math.random() * 10
+    });
+}
+
+// 血だまりを作成
+function createBloodPool(x, y) {
+    bloodPools.push({
+        x: x,
+        y: y,
+        size: 5 + Math.random() * 15,
+        alpha: 0.8,
+        growing: true,
+        maxSize: 20 + Math.random() * 30
+    });
+}
+
+// 体パーツの更新
+function updateBodyParts(dt) {
+    if (bodyParts.length === 0) return;
+
+    let farthestDistance = 0;
+    let farthestPart = null;
+
+    for (const part of bodyParts) {
+        const pos = part.body.getPosition();
+        const vel = part.body.getLinearVelocity();
+
+        // 距離を計算
+        const distance = pos.x - part.startX;
+        if (distance > farthestDistance) {
+            farthestDistance = distance;
+            farthestPart = part;
+        }
+
+        // 出血エフェクト
+        if (part.bleeding && !part.settled) {
+            part.bleedTimer += dt;
+            if (part.bleedTimer > 0.05) {
+                part.bleedTimer = 0;
+                createBloodSplatter(pos.x, pos.y, vel.x * 0.1, vel.y * 0.1, 0.5);
+
+                // 軌跡を記録
+                part.trailPoints.push({ x: pos.x, y: pos.y });
+                if (part.trailPoints.length > 20) {
+                    part.trailPoints.shift();
+                }
+            }
+        }
+
+        // 地面に落ちて停止したら
+        if (pos.y < 2.5 && vel.length() < 1) {
+            if (!part.settled) {
+                part.settled = true;
+                part.bleeding = false;
+                createBloodPool(pos.x, pos.y);
+            }
+        }
+    }
+
+    // 一番遠くのパーツを更新
+    if (farthestPart) {
+        state.farthestPart = farthestPart;
+        state.distance = Math.max(0, farthestDistance);
+        state.maxDistance = Math.max(state.maxDistance, state.distance);
+    }
+
+    // 血しぶきの更新
+    for (let i = bloodEffects.length - 1; i >= 0; i--) {
+        const blood = bloodEffects[i];
+        blood.velY += blood.gravity * dt;
+        blood.x += blood.velX * dt;
+        blood.y += blood.velY * dt;
+        blood.life -= dt * 2;
+
+        // 地面に落ちたら血だまりに
+        if (blood.y < 2) {
+            if (Math.random() < 0.3) {
+                createBloodPool(blood.x, 2);
+            }
+            blood.life = 0;
+        }
+
+        if (blood.life <= 0) {
+            bloodEffects.splice(i, 1);
+        }
+    }
+
+    // 血だまりの更新
+    for (const pool of bloodPools) {
+        if (pool.growing && pool.size < pool.maxSize) {
+            pool.size += dt * 10;
+        } else {
+            pool.growing = false;
+            pool.alpha = Math.max(0.3, pool.alpha - dt * 0.05);
+        }
+    }
+}
+
+// 体パーツの描画
+function drawBodyParts() {
+    // 血の軌跡を先に描画
+    for (const part of bodyParts) {
+        if (part.trailPoints.length > 1) {
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(139, 0, 0, 0.5)';
+            ctx.lineWidth = 3;
+            const firstPoint = toCanvas(part.trailPoints[0].x, part.trailPoints[0].y);
+            ctx.moveTo(firstPoint.x, firstPoint.y);
+            for (let i = 1; i < part.trailPoints.length; i++) {
+                const point = toCanvas(part.trailPoints[i].x, part.trailPoints[i].y);
+                ctx.lineTo(point.x, point.y);
+            }
+            ctx.stroke();
+        }
+    }
+
+    // 血だまり
+    for (const pool of bloodPools) {
+        const pos = toCanvas(pool.x, 2);
+        ctx.fillStyle = `rgba(139, 0, 0, ${pool.alpha})`;
+        ctx.beginPath();
+        ctx.ellipse(pos.x, pos.y + 10, pool.size, pool.size * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // 血しぶき
+    for (const blood of bloodEffects) {
+        const pos = toCanvas(blood.x, blood.y);
+        ctx.fillStyle = blood.color;
+        ctx.globalAlpha = blood.life;
+        ctx.beginPath();
+        ctx.arc(pos.x, pos.y, blood.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+
+    // 体パーツを描画
+    for (const part of bodyParts) {
+        const pos = part.body.getPosition();
+        const angle = part.body.getAngle();
+        const canvasPos = toCanvas(pos.x, pos.y);
+        const w = part.def.width * CONFIG.physics.scale;
+        const h = part.def.height * CONFIG.physics.scale;
+
+        ctx.save();
+        ctx.translate(canvasPos.x, canvasPos.y);
+        ctx.rotate(-angle);
+
+        // 肉片の場合は不定形に
+        if (part.def.isGore) {
+            ctx.fillStyle = part.def.color;
+            ctx.beginPath();
+            ctx.arc(0, 0, w / 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 血の滴り
+            ctx.fillStyle = '#660000';
+            ctx.beginPath();
+            ctx.arc(w * 0.2, h * 0.3, w * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+        } else {
+            // 通常のパーツ
+            ctx.fillStyle = part.def.color;
+            ctx.fillRect(-w/2, -h/2, w, h);
+
+            // 切断面（赤い端）
+            ctx.fillStyle = '#8B0000';
+            if (part.type === 'head') {
+                ctx.fillRect(-w/2, h/2 - 4, w, 4);
+            } else if (part.type === 'torso') {
+                ctx.fillRect(-w/2, -h/2, w, 3);
+                ctx.fillRect(-w/2, h/2 - 3, w, 3);
+                ctx.fillRect(-w/2, -h/2, 3, h);
+                ctx.fillRect(w/2 - 3, -h/2, 3, h);
+            } else if (part.type.includes('Arm') || part.type.includes('Leg')) {
+                ctx.fillRect(-w/2, -h/2, w, 3);
+            }
+
+            // 頭の顔
+            if (part.def.eyes) {
+                // 目（×印で死んだ目）
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                // 左目
+                ctx.beginPath();
+                ctx.moveTo(-w * 0.25 - 4, -h * 0.1 - 4);
+                ctx.lineTo(-w * 0.25 + 4, -h * 0.1 + 4);
+                ctx.moveTo(-w * 0.25 + 4, -h * 0.1 - 4);
+                ctx.lineTo(-w * 0.25 - 4, -h * 0.1 + 4);
+                ctx.stroke();
+                // 右目
+                ctx.beginPath();
+                ctx.moveTo(w * 0.25 - 4, -h * 0.1 - 4);
+                ctx.lineTo(w * 0.25 + 4, -h * 0.1 + 4);
+                ctx.moveTo(w * 0.25 + 4, -h * 0.1 - 4);
+                ctx.lineTo(w * 0.25 - 4, -h * 0.1 + 4);
+                ctx.stroke();
+
+                // 口（舌を出した死に顔）
+                ctx.fillStyle = '#333';
+                ctx.fillRect(-w * 0.2, h * 0.15, w * 0.4, 3);
+                ctx.fillStyle = '#FF6B6B';
+                ctx.beginPath();
+                ctx.ellipse(0, h * 0.25, w * 0.15, h * 0.1, 0, 0, Math.PI);
+                ctx.fill();
+            }
+
+            // 胴体の内臓が見える感じ
+            if (part.type === 'torso') {
+                ctx.fillStyle = '#8B0000';
+                ctx.beginPath();
+                ctx.ellipse(0, 0, w * 0.3, h * 0.25, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#A52A2A';
+                ctx.beginPath();
+                ctx.ellipse(-w * 0.1, h * 0.1, w * 0.15, h * 0.1, 0.3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 骨が見える
+            if (part.type.includes('Arm') || part.type.includes('Leg')) {
+                ctx.fillStyle = '#FFFFF0';
+                ctx.fillRect(-w * 0.15, -h/2, w * 0.3, h * 0.15);
+            }
+        }
+
+        ctx.restore();
+    }
+
+    // 一番遠くのパーツにマーカー
+    if (state.farthestPart && state.phase === 'flying') {
+        const pos = state.farthestPart.body.getPosition();
+        const canvasPos = toCanvas(pos.x, pos.y);
+
+        // 矢印マーカー
+        ctx.fillStyle = '#FFD700';
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(canvasPos.x, canvasPos.y - 60);
+        ctx.lineTo(canvasPos.x - 10, canvasPos.y - 75);
+        ctx.lineTo(canvasPos.x + 10, canvasPos.y - 75);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // パーツ名
+        ctx.fillStyle = '#FFD700';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(`${state.farthestPart.def.name}`, canvasPos.x, canvasPos.y - 80);
+    }
 }
 
 // ============================================
@@ -594,6 +1155,7 @@ function startAttack(type) {
     player.attackType = actualType;
     player.attackPhase = 'startup';
     player.attackTimer = 0;
+    player.attackTotalTime = 0;  // オートキャンセル判定用
     player.lastAttackHit = false;
     player.cancelWindow = false;
 
@@ -698,6 +1260,7 @@ function updateAttack(dt) {
 
     // 溜め中でない時のみ攻撃タイマーを進める
     player.attackTimer += dt;
+    player.attackTotalTime += dt;  // オートキャンセル判定用
 
     // Attack phases
     if (player.attackPhase === 'startup') {
@@ -767,9 +1330,25 @@ function checkAttackHit() {
     const hitRange = attack.range / 2 + Math.max(CONFIG.sandbag.width, CONFIG.sandbag.height) / 2;
 
     if (dist < hitRange) {
+        // スイートスポット/サワースポット判定
+        let hitType = 'normal';
+        if (attack.hasSweetspot) {
+            // ヒットボックスの中心からの距離の割合
+            const hitboxRadius = attack.range / 2;
+            const distFromCenter = dist;
+            const distRatio = distFromCenter / hitboxRadius;
+
+            // 外側（先端）がスイートスポット
+            if (distRatio >= CONFIG.sweetspot.threshold) {
+                hitType = 'sweetspot';
+            } else if (distRatio < 0.4) {
+                hitType = 'sourspot';
+            }
+        }
+
         // 後ろ攻撃の場合は方向を反転
         const hitDirection = hitboxDir === 'back' ? -direction : direction;
-        applyHit(attack, hitDirection);
+        applyHit(attack, hitDirection, hitType);
         player.lastAttackHit = true;
         player.cancelWindow = true;
 
@@ -778,7 +1357,7 @@ function checkAttackHit() {
     }
 }
 
-function applyHit(attack, direction) {
+function applyHit(attack, direction, hitType = 'normal') {
     const now = performance.now();
 
     // ジャストフレーム判定（コンボ中の次のヒットまでのタイミング）
@@ -796,6 +1375,23 @@ function applyHit(attack, direction) {
     state.lastCounterHit = sandbag.inRecovery;
     let counterHitBonus = state.lastCounterHit ? CONFIG.combo.counterHit.damageMultiplier : 1.0;
 
+    // スイートスポット/サワースポット補正
+    let sweetspotDamageMultiplier = 1.0;
+    let sweetspotKBMultiplier = 1.0;
+    state.lastSweetspot = false;
+    state.lastSourspot = false;
+
+    if (hitType === 'sweetspot') {
+        const baseMultiplier = attack.sweetspotMultiplier || CONFIG.sweetspot.damageMultiplier;
+        sweetspotDamageMultiplier = baseMultiplier;
+        sweetspotKBMultiplier = attack.sweetspotMultiplier || CONFIG.sweetspot.knockbackMultiplier;
+        state.lastSweetspot = true;
+    } else if (hitType === 'sourspot') {
+        sweetspotDamageMultiplier = CONFIG.sweetspot.sourDamageMultiplier;
+        sweetspotKBMultiplier = CONFIG.sweetspot.sourKnockbackMultiplier;
+        state.lastSourspot = true;
+    }
+
     // ダメージ計算（溜め攻撃対応）
     let baseDamage = attack.damage;
     if (attack.maxDamage && player.chargeAmount > 0) {
@@ -806,7 +1402,7 @@ function applyHit(attack, direction) {
     const staleMultiplier = getStaleMultiplier(player.attackType);
     const comboBonus = getComboBonus();
 
-    const finalDamage = baseDamage * staleMultiplier * comboBonus * justFrameBonus * counterHitBonus;
+    const finalDamage = baseDamage * staleMultiplier * comboBonus * justFrameBonus * counterHitBonus * sweetspotDamageMultiplier;
     state.damage += finalDamage;
     state.totalDamageDealt += finalDamage;
 
@@ -825,32 +1421,47 @@ function applyHit(attack, direction) {
     state.lastHitTime = now;
     state.maxCombo = Math.max(state.maxCombo, state.combo);
 
-    // ノックバック計算（溜め攻撃対応）
+    // ノックバック計算（溜め攻撃対応 + スイートスポット）
     const chargeMultiplier = attack.chargeTime ? player.chargeAmount : 0;
-    const knockback = calculateKnockback(attack, state.damage, chargeMultiplier);
+    let knockback = calculateKnockback(attack, state.damage, chargeMultiplier);
+    knockback *= sweetspotKBMultiplier;
 
     // 角度の計算（度からラジアン）
-    let angle = attack.angle * Math.PI / 180;
+    let baseAngle = attack.angle;
 
-    // メテオスマッシュの処理
-    if (attack.isMeteor) {
-        // メテオは下向き
-        angle = attack.angle * Math.PI / 180;
+    // 角度調整（攻撃時の方向入力）
+    if (attack.canAngle) {
+        if (input.up) {
+            baseAngle += CONFIG.angleInfluence.up;
+        } else if (input.down) {
+            baseAngle += CONFIG.angleInfluence.down;
+        }
+    }
+
+    let angle = baseAngle * Math.PI / 180;
+
+    // サワースポットで当てると自分から離れる方向に飛ぶ（下強など）
+    if (attack.sendAwayOnSourspot && hitType === 'sourspot') {
+        // 方向を反転させる
+        direction = -direction;
     }
 
     // 空中での攻撃は角度が変わる
     if (!player.grounded && !attack.isMeteor) {
-        angle += 0.1; // やや上向きに
+        angle += 0.05; // やや上向きに
     }
 
     // ノックバックベクトル
     const kbX = Math.cos(angle) * knockback * direction;
     const kbY = Math.sin(angle) * knockback;
 
-    // ヒットストップ
+    // ヒットストップ（スイートスポットで増加）
     let hitstopTime = attack.hitstop;
     if (state.lastCounterHit) {
         hitstopTime *= CONFIG.combo.counterHit.hitstunMultiplier;
+    }
+    if (state.lastSweetspot) {
+        hitstopTime *= 1.3;  // スイートスポットでヒットストップ増加
     }
     state.hitstop = hitstopTime;
 
@@ -880,12 +1491,12 @@ function applyHit(attack, direction) {
         distanceEl.classList.remove('hidden');
 
         // スローモーション演出
-        state.slowMotion = 0.8;  // 0.8秒間スロー
-        state.slowMotionScale = 0.2;  // 20%速度
+        state.slowMotion = 0.8;
+        state.slowMotionScale = 0.2;
     }
 
-    // エフェクト
-    createHitEffect(sandbag.getPosition(), knockback, state.lastJustFrame, state.lastCounterHit, player.attackType === 'bat');
+    // エフェクト（hitTypeを渡す）
+    createHitEffect(sandbag.getPosition(), knockback, state.lastJustFrame, state.lastCounterHit, player.attackType === 'bat', hitType);
     updateUI();
 }
 
@@ -914,7 +1525,7 @@ function endAttack() {
 // ============================================
 const hitEffects = [];
 
-function createHitEffect(pos, knockback, isJustFrame, isCounterHit, isBatHit = false) {
+function createHitEffect(pos, knockback, isJustFrame, isCounterHit, isBatHit = false, hitType = 'normal') {
     const effect = {
         x: pos.x,
         y: pos.y,
@@ -923,7 +1534,8 @@ function createHitEffect(pos, knockback, isJustFrame, isCounterHit, isBatHit = f
         knockback: knockback,
         justFrame: isJustFrame,
         counterHit: isCounterHit,
-        batHit: isBatHit
+        batHit: isBatHit,
+        hitType: hitType  // 'normal', 'sweetspot', 'sourspot'
     };
     hitEffects.push(effect);
 }
@@ -957,7 +1569,7 @@ function updateHitEffects(dt) {
     }
 }
 
-// Player Movement (Enhanced)
+// Player Movement (Enhanced with Short Hop, Pivot, RAR)
 function updatePlayer(dt) {
     if (state.phase !== 'playing' || state.launched) {
         if (playerBody) {
@@ -980,11 +1592,22 @@ function updatePlayer(dt) {
     if (player.grounded && !wasGrounded) {
         player.jumpsLeft = CONFIG.player.maxJumps;
         player.canAirDash = true;
+        player.running = false;
 
-        // 着地硬直
+        // 着地硬直（オートキャンセル判定）
         if (player.attacking) {
             const attack = CONFIG.attacks[player.attackType];
-            player.landingLag = attack.landingLag;
+            let landLag = attack.landingLag;
+
+            // オートキャンセル判定
+            if (attack.autocancel) {
+                const totalTime = player.attackTotalTime;
+                if (totalTime < attack.autocancel.early || totalTime > attack.autocancel.late) {
+                    landLag = 0.067;  // オートキャンセル成功：4F
+                }
+            }
+
+            player.landingLag = landLag;
             endAttack();
         }
     }
@@ -994,6 +1617,19 @@ function updatePlayer(dt) {
         player.landingLag -= dt;
         playerBody.setLinearVelocity(Vec2(0, vel.y));
         return;
+    }
+
+    // ピボット/ターンアラウンドタイマー更新
+    if (player.pivotTimer > 0) {
+        player.pivotTimer -= dt;
+    }
+    if (player.turnaroundTimer > 0) {
+        player.turnaroundTimer -= dt;
+    }
+
+    // ショートホップ判定
+    if (player.jumpHeld) {
+        player.jumpHeldTime += dt;
     }
 
     // 空中ダッシュ
@@ -1015,22 +1651,62 @@ function updatePlayer(dt) {
         return;
     }
 
-    // 通常移動
+    // 移動処理
     const speedMult = player.attacking ? 0.3 : 1;
     let targetVelX = 0;
+    let currentMoveDir = 0;
 
-    if (input.left) {
-        targetVelX = -CONFIG.player.speed * speedMult;
-        if (!player.attacking) player.facingRight = false;
-    }
-    if (input.right) {
-        targetVelX = CONFIG.player.speed * speedMult;
-        if (!player.attacking) player.facingRight = true;
+    if (input.left) currentMoveDir = -1;
+    if (input.right) currentMoveDir = 1;
+
+    if (player.grounded) {
+        // 地上移動
+        // ピボット判定（方向転換）
+        if (currentMoveDir !== 0 && player.lastMoveDir !== 0 && currentMoveDir !== player.lastMoveDir) {
+            player.pivotTimer = CONFIG.player.pivotWindow;
+            player.wantsTurnaround = true;
+        }
+
+        if (currentMoveDir !== 0) {
+            // ダッシュ判定
+            if (Math.abs(vel.x) > CONFIG.player.speed * 0.8) {
+                player.running = true;
+            }
+
+            const speed = player.running ? CONFIG.player.runSpeed : CONFIG.player.speed;
+            targetVelX = currentMoveDir * speed * speedMult;
+
+            if (!player.attacking) {
+                player.facingRight = currentMoveDir > 0;
+            }
+        } else {
+            // 停止
+            player.running = false;
+        }
+
+        player.lastMoveDir = currentMoveDir;
+    } else {
+        // 空中移動（空中制御）
+        if (currentMoveDir !== 0) {
+            targetVelX = currentMoveDir * CONFIG.player.airSpeed;
+
+            // RAR (Reverse Aerial Rush) - 空中で反対方向を入力すると振り向く
+            if (!player.attacking) {
+                const wantsFacing = currentMoveDir > 0;
+                if (wantsFacing !== player.facingRight) {
+                    player.turnaroundTimer = 0.1;  // 振り向き猶予
+                    player.facingRight = wantsFacing;
+                }
+            }
+        }
+
+        // 空中では現在の速度を維持しつつ入力で調整
+        targetVelX = vel.x * 0.95 + targetVelX * 0.3;
     }
 
     playerBody.setLinearVelocity(Vec2(targetVelX, vel.y));
 
-    // ジャンプ（キャンセル対応）
+    // ジャンプ処理
     if (input.jumpPressed) {
         const canJumpCancel = player.attacking && player.cancelWindow &&
             CONFIG.attacks[player.attackType]?.cancelable.includes('jump');
@@ -1039,10 +1715,35 @@ function updatePlayer(dt) {
             if (canJumpCancel) {
                 endAttack();
             }
-            playerBody.setLinearVelocity(Vec2(vel.x, CONFIG.player.jumpForce));
-            player.jumpsLeft--;
+
+            // ジャンプボタンを押した瞬間
+            player.jumpHeld = true;
+            player.jumpHeldTime = 0;
             input.jumpPressed = false;
         }
+    }
+
+    // ジャンプ実行（ボタンを離したときor長押し時）
+    if (player.jumpHeld && player.jumpsLeft > 0) {
+        if (input.jumpReleased || player.jumpHeldTime >= player.shortHopWindow) {
+            // ショートホップ or フルホップ判定
+            const isShortHop = player.jumpHeldTime < player.shortHopWindow && input.jumpReleased;
+            const jumpForce = isShortHop ? CONFIG.player.shortHopForce : CONFIG.player.jumpForce;
+
+            playerBody.setLinearVelocity(Vec2(vel.x, jumpForce));
+            player.jumpsLeft--;
+            player.jumpHeld = false;
+            player.jumpHeldTime = 0;
+            input.jumpReleased = false;
+
+            // 空中ジャンプ時は向きを変えられる
+            if (!player.grounded && currentMoveDir !== 0) {
+                player.facingRight = currentMoveDir > 0;
+            }
+        }
+    } else if (!player.jumpHeld) {
+        // ジャンプボタンを押していない時はreleased flagをクリア
+        input.jumpReleased = false;
     }
 
     // 境界
@@ -1052,6 +1753,29 @@ function updatePlayer(dt) {
 
 // Sandbag Update (Enhanced)
 function updateSandbag(dt) {
+    // バラバラフェーズの処理（sandbagがなくても実行）
+    if (state.dismembered) {
+        updateBodyParts(dt);
+
+        // 全パーツが停止したら終了
+        let allSettled = true;
+        for (const part of bodyParts) {
+            const vel = part.body.getLinearVelocity();
+            const pos = part.body.getPosition();
+            if (vel.length() > 0.3 || pos.y > 3) {
+                allSettled = false;
+                break;
+            }
+        }
+
+        // 5秒経過または全パーツ停止で終了
+        const dismemberTime = (state.flyingTime || 0);
+        if ((allSettled && dismemberTime > 2) || dismemberTime > 20) {
+            showResult();
+        }
+        return;
+    }
+
     if (!sandbag) return;
 
     // ヒットストップ中は停止
@@ -1119,23 +1843,24 @@ function updateSandbag(dt) {
     }
 
     // 飛行フェーズ
-    if (state.phase === 'flying') {
+    if (state.phase === 'flying' && !state.dismembered) {
         const pos = sandbag.getPosition();
         state.distance = Math.max(0, pos.x - sandbag.startX);
         state.maxDistance = Math.max(state.maxDistance, state.distance);
 
         const vel = sandbag.getLinearVelocity();
 
-        // 終了条件:
-        // 1. 速度が十分小さく地面近く
-        // 2. 画面外に落下
-        // 3. 飛行時間が15秒を超えた（タイムアウト）
-        const stopped = vel.length() < 0.5 && pos.y < 3;
-        const fellOff = pos.y < -10;
-        const timeout = (state.flyingTime || 0) > 15;
+        // 地面に着いたらバラバラになる！
+        if (pos.y < 3.2 && vel.y < -5) {
+            // インパクト！バラバラに！
+            dismemberSandbag();
+            return;
+        }
 
-        if (stopped || fellOff || timeout) {
-            showResult();
+        // タイムアウト
+        const timeout = (state.flyingTime || 0) > 15;
+        if (timeout) {
+            dismemberSandbag();
         }
     }
 }
@@ -1163,8 +1888,13 @@ function draw() {
     ctx.clearRect(0, 0, CONFIG.canvas.width, CONFIG.canvas.height);
 
     let cameraX = 0;
-    if (state.phase === 'flying' && sandbag) {
-        cameraX = Math.max(0, (sandbag.getPosition().x - 10) * CONFIG.physics.scale);
+    // バラバラフェーズでは一番遠いパーツを追跡
+    if (state.phase === 'flying') {
+        if (state.dismembered && state.farthestPart) {
+            cameraX = Math.max(0, (state.farthestPart.body.getPosition().x - 10) * CONFIG.physics.scale);
+        } else if (sandbag) {
+            cameraX = Math.max(0, (sandbag.getPosition().x - 10) * CONFIG.physics.scale);
+        }
     }
 
     ctx.save();
@@ -1176,11 +1906,26 @@ function draw() {
         ctx.translate(shake, shake);
     }
 
+    // バラバラになった瞬間の画面揺れ
+    if (state.screenShake && state.screenShake > 0) {
+        const shake = (Math.random() - 0.5) * state.screenShake * 30;
+        ctx.translate(shake, shake);
+        state.screenShake -= 0.02;
+    }
+
     drawBackground(cameraX);
     drawDistanceMarkers(cameraX);
     drawPlatform();
     drawBarrier();
-    drawSandbag();
+
+    // バラバラでなければサンドバッグを描画
+    if (!state.dismembered) {
+        drawSandbag();
+    } else {
+        // バラバラの体パーツを描画
+        drawBodyParts();
+    }
+
     drawPlayer();
     drawAttackHitbox();
     drawHitEffects();
@@ -1365,24 +2110,43 @@ function drawPlayer() {
         ctx.translate(shake, shake * 0.5);
     }
 
-    if (!player.facingRight) ctx.scale(-1, 1);
+    const facingDir = player.facingRight ? 1 : -1;
 
-    // 着地硬直中は色を変える
+    // 状態に応じて色を変える
     let bodyColor = '#4A90D9';
+    let isAttackingBack = player.attacking && CONFIG.attacks[player.attackType]?.hitboxDir === 'back';
+
     if (player.charging && player.attackType === 'bat') {
-        // バット溜め中は光る
         const glow = Math.floor(player.chargeAmount * 255);
         bodyColor = `rgb(${100 + glow}, ${50 + glow/2}, ${50})`;
+    } else if (isAttackingBack) {
+        bodyColor = '#FF9933';  // 空後は特別なオレンジ色
     } else if (player.attacking) {
         bodyColor = player.attackPhase === 'active' ? '#FF3333' : '#FF6B6B';
     } else if (player.landingLag > 0) {
         bodyColor = '#666699';
     } else if (player.airDashing) {
         bodyColor = '#33CCFF';
+    } else if (player.running) {
+        bodyColor = '#5AA0E9';
+    } else if (player.pivotTimer > 0) {
+        bodyColor = '#FFAA33';
     }
 
+    // 体（向きがわかるように斜めに）
     ctx.fillStyle = bodyColor;
-    ctx.fillRect(-w/2, -h/2, w, h);
+    ctx.beginPath();
+    ctx.moveTo(-w/2, -h/2);
+    ctx.lineTo(w/2 + facingDir * 5, -h/2);  // 前側が少し出る
+    ctx.lineTo(w/2 + facingDir * 3, h/2);
+    ctx.lineTo(-w/2 - facingDir * 3, h/2);
+    ctx.closePath();
+    ctx.fill();
+
+    // 背中側のマーク（後ろがわかるように）
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+    const backX = -facingDir * (w/2 - 5);
+    ctx.fillRect(backX - 3, -h/4, 6, h/2);
 
     // バット溜め中のオーラエフェクト
     if (player.charging && player.attackType === 'bat') {
@@ -1395,34 +2159,114 @@ function drawPlayer() {
         ctx.stroke();
     }
 
-    // 頭
+    // 頭（向いている方向に少しずらす）
+    const headX = facingDir * 3;
     ctx.fillStyle = '#FFCC99';
     ctx.beginPath();
-    ctx.arc(0, -h/2 - 12, 12, 0, Math.PI * 2);
+    ctx.arc(headX, -h/2 - 12, 12, 0, Math.PI * 2);
     ctx.fill();
 
-    // 攻撃中の腕
+    // 目（前を向いている方向）
+    ctx.fillStyle = '#333';
+    const eyeX = headX + facingDir * 5;
+    ctx.beginPath();
+    ctx.arc(eyeX, -h/2 - 14, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 向きインジケーター（矢印）
+    if (!player.attacking) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        const arrowX = facingDir * (w/2 + 8);
+        ctx.moveTo(arrowX, 0);
+        ctx.lineTo(arrowX + facingDir * 10, 0);
+        ctx.lineTo(arrowX + facingDir * 5, -5);
+        ctx.moveTo(arrowX + facingDir * 10, 0);
+        ctx.lineTo(arrowX + facingDir * 5, 5);
+        ctx.stroke();
+    }
+
+    // 攻撃中の腕とエフェクト
     if (player.attacking && player.attackPhase === 'active') {
-        ctx.fillStyle = '#FFCC99';
         const attack = CONFIG.attacks[player.attackType];
         const armLength = attack.range * CONFIG.physics.scale * 0.5;
+        const hitboxDir = attack.hitboxDir || 'forward';
 
-        if (player.attackType === 'upperStrong' || player.attackType === 'meteor') {
-            // 上方向/下方向の攻撃
-            const yDir = player.attackType === 'meteor' ? 1 : -1;
-            ctx.fillRect(-5, -h/2, 10, armLength * yDir);
-        } else {
-            ctx.fillRect(w/2 - 5, -5, armLength, 10);
-        }
+        ctx.fillStyle = '#FFCC99';
 
-        // バット
-        if (player.attackType === 'bat') {
-            ctx.fillStyle = '#8B4513';
-            ctx.fillRect(w/2 + armLength - 10, -15, 40, 12);
-        } else {
+        if (hitboxDir === 'up' || player.attackType === 'uair' || player.attackType === 'upSmash' || player.attackType === 'upperStrong') {
+            // 上方向の攻撃
+            ctx.fillRect(-5, -h/2 - armLength, 10, armLength);
             ctx.beginPath();
-            ctx.arc(w/2 + armLength, 0, 8, 0, Math.PI * 2);
+            ctx.arc(0, -h/2 - armLength, 8, 0, Math.PI * 2);
             ctx.fill();
+        } else if (hitboxDir === 'down' || player.attackType === 'dair') {
+            // 下方向の攻撃（メテオ）
+            ctx.fillRect(-5, h/2, 10, armLength);
+            ctx.beginPath();
+            ctx.arc(0, h/2 + armLength, 10, 0, Math.PI * 2);
+            ctx.fill();
+            // メテオマーク
+            ctx.fillStyle = '#FF6600';
+            ctx.font = 'bold 16px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('▼', 0, h/2 + armLength + 5);
+        } else if (hitboxDir === 'back') {
+            // 空後！後ろに攻撃
+            const backDir = -facingDir;
+            ctx.save();
+
+            // 後ろ向きの腕
+            ctx.fillRect(backDir * w/2, -10, backDir * armLength, 15);
+
+            // 空後の足（キック）
+            ctx.fillStyle = bodyColor;
+            ctx.fillRect(backDir * w/2, 5, backDir * (armLength * 0.8), 12);
+
+            // 空後のインパクトエフェクト
+            ctx.strokeStyle = '#FF9933';
+            ctx.lineWidth = 4;
+            const impactX = backDir * (w/2 + armLength);
+            for (let i = 0; i < 3; i++) {
+                ctx.beginPath();
+                ctx.arc(impactX, 0, 15 + i * 8, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+
+            // "BAIR" テキスト
+            ctx.fillStyle = '#FF9933';
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('BAIR', impactX, -25);
+
+            ctx.restore();
+        } else if (hitboxDir === 'around') {
+            // 周囲攻撃
+            ctx.strokeStyle = 'rgba(255, 200, 100, 0.6)';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(0, 0, armLength, 0, Math.PI * 2);
+            ctx.stroke();
+        } else {
+            // 前方向の攻撃
+            ctx.fillRect(facingDir * w/2, -5, facingDir * armLength, 10);
+
+            if (player.attackType === 'bat') {
+                // バット
+                ctx.fillStyle = '#8B4513';
+                const batX = facingDir * (w/2 + armLength - 5);
+                ctx.fillRect(batX, -15, facingDir * 40, 12);
+
+                // バットの先端（スイートスポット）
+                ctx.fillStyle = '#FFD700';
+                ctx.fillRect(batX + facingDir * 30, -15, facingDir * 10, 12);
+            } else {
+                // 拳
+                ctx.beginPath();
+                ctx.arc(facingDir * (w/2 + armLength), 0, 8, 0, Math.PI * 2);
+                ctx.fill();
+            }
         }
     }
 
@@ -1439,6 +2283,12 @@ function drawPlayer() {
             ctx.stroke();
         }
     }
+
+    // 向きテキスト表示（デバッグ用、常時表示）
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.font = '10px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(player.facingRight ? '→前' : '前←', canvasPos.x, canvasPos.y - h/2 - 35);
 }
 
 function drawAttackHitbox() {
@@ -1549,23 +2399,36 @@ function drawHitEffects() {
             const size = 30 + progress * 50 + (effect.knockback || 20) * 0.3;
             const alpha = 1 - progress;
 
-            // ジャストフレーム/カウンターヒットで色が変わる
+            // ヒットタイプ/ジャストフレーム/カウンターヒットで色が変わる
             let color = '255, 200, 0';
+            let lineWidth = 4;
+
+            // スイートスポット/サワースポット
+            if (effect.hitType === 'sweetspot') {
+                color = '255, 100, 255';  // 紫（スイートスポット）
+                lineWidth = 6;
+            } else if (effect.hitType === 'sourspot') {
+                color = '150, 150, 150';  // 灰色（サワースポット）
+                lineWidth = 3;
+            }
+
+            // ジャストフレームとカウンターヒットは優先
             if (effect.justFrame) {
                 color = '0, 255, 255';
             }
             if (effect.counterHit) {
                 color = '255, 50, 50';
+                lineWidth = 6;
             }
 
             ctx.strokeStyle = `rgba(${color}, ${alpha})`;
-            ctx.lineWidth = effect.counterHit ? 6 : 4;
+            ctx.lineWidth = lineWidth;
             ctx.beginPath();
             ctx.arc(pos.x, pos.y, size, 0, Math.PI * 2);
             ctx.stroke();
 
             // インパクトライン
-            const lineCount = effect.counterHit ? 12 : 8;
+            const lineCount = effect.counterHit ? 12 : (effect.hitType === 'sweetspot' ? 10 : 8);
             for (let i = 0; i < lineCount; i++) {
                 const angle = (i / lineCount) * Math.PI * 2;
                 const inner = size * 0.5;
@@ -1577,17 +2440,26 @@ function drawHitEffects() {
             }
 
             // テキスト表示
+            let textY = pos.y - size - 10;
+            if (effect.hitType === 'sweetspot' && effect.life > 0.25) {
+                ctx.fillStyle = '#FF66FF';
+                ctx.font = 'bold 22px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('SWEET!', pos.x, textY);
+                textY -= 25;
+            }
             if (effect.justFrame && effect.life > 0.25) {
                 ctx.fillStyle = '#00FFFF';
                 ctx.font = 'bold 20px Arial';
                 ctx.textAlign = 'center';
-                ctx.fillText('JUST!', pos.x, pos.y - size - 10);
+                ctx.fillText('JUST!', pos.x, textY);
+                textY -= 25;
             }
             if (effect.counterHit && effect.life > 0.25) {
                 ctx.fillStyle = '#FF3333';
                 ctx.font = 'bold 24px Arial';
                 ctx.textAlign = 'center';
-                ctx.fillText('COUNTER!', pos.x, pos.y - size - 30);
+                ctx.fillText('COUNTER!', pos.x, textY);
             }
         }
     }
@@ -1667,7 +2539,12 @@ function updateUI() {
     }
 
     if (state.phase === 'flying' || state.phase === 'result') {
-        distanceEl.textContent = `Distance: ${state.maxDistance.toFixed(2)}m`;
+        // バラバラの場合は一番遠くのパーツを表示
+        if (state.dismembered && state.farthestPart && state.farthestPart.def) {
+            distanceEl.textContent = `${state.farthestPart.def.name}: ${state.maxDistance.toFixed(2)}m`;
+        } else {
+            distanceEl.textContent = `Distance: ${state.maxDistance.toFixed(2)}m`;
+        }
     }
 }
 
@@ -1736,7 +2613,19 @@ function showResult() {
     resultScreen.classList.remove('hidden');
 
     const distance = state.maxDistance;
-    finalDistanceEl.textContent = `${distance.toFixed(2)}m`;
+
+    // 一番遠くのパーツの名前を表示
+    let partName = '';
+    if (state.farthestPart && state.farthestPart.def) {
+        partName = state.farthestPart.def.name;
+    }
+
+    // 距離とパーツ名を表示
+    if (partName) {
+        finalDistanceEl.innerHTML = `<span style="color: #FF6B6B; font-size: 0.7em;">${partName}が</span><br>${distance.toFixed(2)}m<span style="color: #FF6B6B; font-size: 0.6em;"> 飛んだ！</span>`;
+    } else {
+        finalDistanceEl.textContent = `${distance.toFixed(2)}m`;
+    }
     maxComboEl.textContent = `Max Combo: ${state.maxCombo}`;
 
     // ランキングに保存
@@ -1865,8 +2754,23 @@ function startGame() {
     state.staleQueue = [];
     state.lastJustFrame = false;
     state.lastCounterHit = false;
+    state.lastSweetspot = false;
+    state.lastSourspot = false;
     state.totalDamageDealt = 0;
     state.comboProration = 1.0;
+    state.dismembered = false;
+    state.farthestPart = null;
+    state.screenShake = 0;
+
+    // バラバラのパーツをクリア
+    for (const part of bodyParts) {
+        if (part.body) {
+            world.destroyBody(part.body);
+        }
+    }
+    bodyParts = [];
+    bloodEffects = [];
+    bloodPools = [];
 
     player.attacking = false;
     player.canAttack = true;
@@ -1876,6 +2780,15 @@ function startGame() {
     player.canAirDash = true;
     player.landingLag = 0;
     player.cancelWindow = false;
+    player.running = false;
+    player.runTimer = 0;
+    player.pivotTimer = 0;
+    player.lastMoveDir = 0;
+    player.jumpHeld = false;
+    player.jumpHeldTime = 0;
+    player.turnaroundTimer = 0;
+    player.wantsTurnaround = false;
+    player.attackTotalTime = 0;
 
     startScreen.classList.add('hidden');
     resultScreen.classList.add('hidden');
@@ -1951,11 +2864,14 @@ document.addEventListener('keyup', (e) => {
         case 'KeyD': case 'ArrowRight': input.right = false; break;
         case 'KeyW': case 'ArrowUp': input.up = false; break;
         case 'KeyS': case 'ArrowDown': input.down = false; break;
-        case 'Space': input.jump = false; break;
+        case 'Space':
+            input.jump = false;
+            input.jumpReleased = true;  // ショートホップ判定用
+            break;
         case 'KeyJ': input.weak = false; break;
         case 'KeyK': input.strong = false; break;
         case 'KeyL': releaseSmash(); break;
-        case 'KeyB': releaseSmash(); break;  // バットも溜め攻撃
+        case 'KeyB': releaseSmash(); break;
         case 'ShiftLeft': case 'ShiftRight': input.airDash = false; break;
     }
 });

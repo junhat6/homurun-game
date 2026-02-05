@@ -18,13 +18,12 @@
         <div id="controls-ui">
             <div class="control-hint">
                 <span class="key">A/D</span> 移動
-                <span class="key">Space</span> Jump
+                <span class="key">Space</span> 小J/大J
                 <span class="key">J</span> 弱
                 <span class="key">K</span> 強
                 <span class="key">L</span> スマ
-                <span class="key">↑/↓+攻撃</span> 派生
-                <span class="key">空中↓J</span> メテオ
                 <span class="key">B</span> バット
+                <span class="key">先端当て</span> Sweet!
             </div>
         </div>
         <div id="charge-bar" class="hidden">
@@ -34,16 +33,21 @@
             <h1>ホームランコンテスト</h1>
             <div class="controls">
                 <h3>基本操作</h3>
-                <p><kbd>A</kbd> <kbd>D</kbd> : 移動 / <kbd>W</kbd> <kbd>S</kbd> : 方向入力</p>
-                <p><kbd>Space</kbd> : ジャンプ（2段可）</p>
+                <p><kbd>A</kbd> <kbd>D</kbd> : 移動（長押しでダッシュ）</p>
+                <p><kbd>Space</kbd> : ジャンプ（短押し: 小ジャンプ / 長押し: 大ジャンプ）</p>
+                <p><kbd>Shift</kbd> : 空中ダッシュ</p>
                 <h3>地上攻撃</h3>
-                <p><kbd>J</kbd> : 弱攻撃（3段派生）/ ダッシュ中: ダッシュ攻撃</p>
+                <p><kbd>J</kbd> : 弱攻撃（3段派生）/ ダッシュ中: DA</p>
                 <p><kbd>K</kbd> : 横強 / <kbd>↑+K</kbd> : 上強 / <kbd>↓+K</kbd> : 下強</p>
                 <p><kbd>L</kbd> : 横スマ / <kbd>↑+L</kbd> : 上スマ / <kbd>↓+L</kbd> : 下スマ</p>
                 <h3>空中攻撃</h3>
                 <p><kbd>J</kbd> : 空N / <kbd>→+J</kbd> : 空前 / <kbd>←+J</kbd> : 空後</p>
                 <p><kbd>↑+J</kbd> : 空上 / <kbd>↓+J</kbd> : 空下（メテオ）</p>
-                <p><kbd>B</kbd> : バット</p>
+                <p><kbd>B</kbd> : バット（溜め可能）</p>
+                <h3>テクニック</h3>
+                <p>先端当て: 攻撃の先端がスイートスポット（ダメージ/吹っ飛び↑）</p>
+                <p>角度調整: 攻撃中に↑↓で吹っ飛び角度を微調整</p>
+                <p>オートキャンセル: 空中技の出始め/終わりで着地すると隙減少</p>
             </div>
             <button id="startBtn">START</button>
         </div>
