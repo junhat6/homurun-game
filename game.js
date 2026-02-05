@@ -490,6 +490,11 @@ function rgbToHex(r, g, b) {
   }).join('');
 }
 
+// 線形補間関数
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
+
 function lerpColor(color1, color2, t) {
   const c1 = hexToRgb(color1);
   const c2 = hexToRgb(color2);
@@ -931,7 +936,9 @@ const state = {
   comboProration: 1.0,
   dismembered: false,  // バラバラになったかどうか
   farthestPart: null,  // 一番遠くに飛んだパーツ
-  timeUpPending: false // チャージ中の時間切れ保留フラグ
+  timeUpPending: false, // チャージ中の時間切れ保留フラグ
+  cameraX: 0,          // カメラX座標
+  cameraY: 0           // カメラY座標
 };
 
 // ============================================
@@ -2881,17 +2888,45 @@ function draw() {
   ctx.clearRect(0, 0, CONFIG.canvas.width, CONFIG.canvas.height);
 
   let cameraX = 0;
+  let cameraY = 0;
+
   // バラバラフェーズでは一番遠いパーツを追跡
   if (state.phase === 'flying') {
+    let pos = null;
     if (state.dismembered && state.farthestPart) {
-      cameraX = (state.farthestPart.body.getPosition().x - 10) * CONFIG.physics.scale;
+      pos = state.farthestPart.body.getPosition();
     } else if (sandbag) {
-      cameraX = (sandbag.getPosition().x - 10) * CONFIG.physics.scale;
+      pos = sandbag.getPosition();
     }
+
+    if (pos) {
+      // X方向：サンドバッグを画面左側に配置
+      const targetCameraX = (pos.x - 10) * CONFIG.physics.scale;
+
+      // Y方向：サンドバッグを画面中央付近に
+      // 画面高さの中央をメートル単位で計算
+      const screenCenterY = CONFIG.canvas.height / 2 / CONFIG.physics.scale;
+      // 地面より下にカメラが行かないように制限（cameraY >= 0）
+      const targetCameraY = Math.max(0, (pos.y - screenCenterY) * CONFIG.physics.scale);
+
+      // Lerpで滑らかに追従
+      // 落下時（カメラが下に移動する時）は追従を速くする
+      const lerpFactorY = targetCameraY < state.cameraY ? 0.25 : 0.1;
+      cameraX = lerp(state.cameraX, targetCameraX, 0.1);
+      cameraY = lerp(state.cameraY, targetCameraY, lerpFactorY);
+
+      state.cameraX = cameraX;
+      state.cameraY = cameraY;
+    }
+  } else {
+    // flying以外のフェーズではカメラをリセット
+    state.cameraX = 0;
+    state.cameraY = 0;
   }
 
   ctx.save();
-  ctx.translate(-cameraX, 0);
+  // Y方向は符号注意：カメラYが正（上に移動）の時、ctx.translateは正の値
+  ctx.translate(-cameraX, cameraY);
 
   // ヒットストップ中は画面を少し揺らす
   if (state.hitstop > 0) {
@@ -2906,7 +2941,7 @@ function draw() {
     state.screenShake -= 0.02;
   }
 
-  drawBackground(cameraX);
+  drawBackground(cameraX, cameraY);
   drawDistanceMarkers(cameraX);
   drawPlatform();
   drawBarrier();
@@ -2930,30 +2965,32 @@ function draw() {
   drawRageIndicator();
 }
 
-function drawBackground(cameraX) {
+function drawBackground(cameraX, cameraY = 0) {
   // 現在の距離を取得（flyingフェーズでなければ0）
   const distance = state.phase === 'flying' ? state.distance : 0;
-  
+
   // 距離に応じたテーマを取得
   const theme = getBackgroundTheme(distance);
-  
-  // 空のグラデーション
-  const gradient = ctx.createLinearGradient(0, 0, 0, CONFIG.canvas.height);
+
+  // 空のグラデーション（画面全体を覆うように）
+  const gradient = ctx.createLinearGradient(0, -cameraY, 0, CONFIG.canvas.height - cameraY);
   gradient.addColorStop(0, theme.sky.top);
   gradient.addColorStop(0.5, theme.sky.middle);
   gradient.addColorStop(1, theme.sky.bottom);
   ctx.fillStyle = gradient;
-  ctx.fillRect(cameraX, 0, CONFIG.canvas.width, CONFIG.canvas.height);
-  
+  // 背景は画面全体を覆う（cameraYの分も考慮して十分大きく描画）
+  ctx.fillRect(cameraX, -cameraY, CONFIG.canvas.width, CONFIG.canvas.height + cameraY + 100);
+
   const groundY = CONFIG.canvas.height - CONFIG.physics.scale;
-  
+
   // 背景要素を描画
   drawBackgroundElements(cameraX, theme.elements, distance, groundY);
-  
+
   // 地面を描画（地面がある場合のみ）
   if (theme.ground) {
     ctx.fillStyle = theme.ground;
-    ctx.fillRect(cameraX, groundY, CONFIG.canvas.width, CONFIG.physics.scale);
+    // 地面も十分に広く描画
+    ctx.fillRect(cameraX, groundY, CONFIG.canvas.width, CONFIG.physics.scale + cameraY + 100);
   }
 }
 
