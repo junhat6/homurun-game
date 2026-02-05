@@ -17,12 +17,14 @@
         </div>
         <div id="controls-ui">
             <div class="control-hint">
-                <span class="key">A/D</span> Move
-                <span class="key">W/SPACE</span> Jump
-                <span class="key">J</span> Weak
-                <span class="key">K</span> Strong
-                <span class="key">L</span> Smash
-                <span class="key">B</span> Bat
+                <span class="key">A/D</span> 移動
+                <span class="key">Space</span> Jump
+                <span class="key">J</span> 弱
+                <span class="key">K</span> 強
+                <span class="key">L</span> スマ
+                <span class="key">↑/↓+攻撃</span> 派生
+                <span class="key">空中↓J</span> メテオ
+                <span class="key">B</span> バット
             </div>
         </div>
         <div id="charge-bar" class="hidden">
@@ -30,23 +32,37 @@
         </div>
         <div id="start-screen">
             <h1>ホームランコンテスト</h1>
-            <p>坪内先生を吹っ飛ばせ！</p>
             <div class="controls">
-                <h3>操作方法</h3>
-                <p><kbd>A</kbd> <kbd>D</kbd> : 移動</p>
-                <p><kbd>W</kbd> / <kbd>SPACE</kbd> : ジャンプ</p>
-                <p><kbd>J</kbd> : 弱攻撃（速い・コンボ始動）</p>
-                <p><kbd>K</kbd> : 強攻撃（中ダメージ）</p>
-                <p><kbd>L</kbd> : スマッシュ（長押しで溜め）</p>
-                <p><kbd>B</kbd> : バットスイング（最終打撃）</p>
+                <h3>基本操作</h3>
+                <p><kbd>A</kbd> <kbd>D</kbd> : 移動 / <kbd>W</kbd> <kbd>S</kbd> : 方向入力</p>
+                <p><kbd>Space</kbd> : ジャンプ（2段可）</p>
+                <h3>地上攻撃</h3>
+                <p><kbd>J</kbd> : 弱攻撃（3段派生）/ ダッシュ中: ダッシュ攻撃</p>
+                <p><kbd>K</kbd> : 横強 / <kbd>↑+K</kbd> : 上強 / <kbd>↓+K</kbd> : 下強</p>
+                <p><kbd>L</kbd> : 横スマ / <kbd>↑+L</kbd> : 上スマ / <kbd>↓+L</kbd> : 下スマ</p>
+                <h3>空中攻撃</h3>
+                <p><kbd>J</kbd> : 空N / <kbd>→+J</kbd> : 空前 / <kbd>←+J</kbd> : 空後</p>
+                <p><kbd>↑+J</kbd> : 空上 / <kbd>↓+J</kbd> : 空下（メテオ）</p>
+                <p><kbd>B</kbd> : バット</p>
             </div>
             <button id="startBtn">START</button>
         </div>
         <div id="result-screen" class="hidden">
             <h1>結果発表</h1>
+            <div id="new-record" style="display:none;">NEW RECORD!</div>
+            <div id="rating"></div>
             <div id="final-distance">0.00m</div>
+            <div id="best-score">Best: 0.00m</div>
             <div id="max-combo">Max Combo: 0</div>
-            <button id="retryBtn">RETRY</button>
+            <div class="result-buttons">
+                <button id="retryBtn">RETRY</button>
+                <button id="rankingBtn" class="secondary">RANKING</button>
+            </div>
+        </div>
+        <div id="ranking-screen" class="hidden">
+            <h1>自己ベスト TOP 10</h1>
+            <div id="ranking-list"></div>
+            <button id="closeRankingBtn">CLOSE</button>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/planck@latest/dist/planck.min.js"></script>
