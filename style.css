@@ -570,3 +570,50 @@ button.secondary:hover {
     40% { content: '..'; }
     60%, 100% { content: '...'; }
 }
+
+/* Minus Ranking Styles */
+.minus-title {
+    font-size: 24px;
+    margin-top: 25px;
+    margin-bottom: 15px;
+    color: #ff6b6b;
+    text-shadow: 0 0 15px #ff6b6b;
+}
+
+#minus-ranking-list {
+    background: linear-gradient(135deg, rgba(255, 107, 107, 0.15), rgba(139, 0, 0, 0.1));
+    border-radius: 10px;
+    padding: 15px;
+    min-width: 400px;
+    border: 1px solid rgba(255, 107, 107, 0.3);
+}
+
+#minus-ranking-list .ranking-item {
+    border-bottom-color: rgba(255, 107, 107, 0.2);
+}
+
+.ranking-item.minus-first {
+    background: linear-gradient(90deg, rgba(139, 0, 0, 0.4), transparent);
+}
+
+.ranking-item.minus-second {
+    background: linear-gradient(90deg, rgba(139, 69, 19, 0.3), transparent);
+}
+
+.ranking-item.minus-third {
+    background: linear-gradient(90deg, rgba(128, 0, 128, 0.25), transparent);
+}
+
+.ranking-item.minus-first .rank-number { color: #8b0000; }
+.ranking-item.minus-second .rank-number { color: #8b4513; }
+.ranking-item.minus-third .rank-number { color: #800080; }
+
+.rank-distance.minus {
+    color: #ff6b6b !important;
+}
+
+#minus-ranking-list .no-records {
+    color: #ff6b6b;
+    padding: 20px;
+    font-size: 14px;
+}

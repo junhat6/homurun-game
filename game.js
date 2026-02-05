@@ -845,6 +845,7 @@ const chargeBar = document.getElementById('charge-bar');
 const chargeFill = document.getElementById('charge-fill');
 const rankingScreen = document.getElementById('ranking-screen');
 const rankingList = document.getElementById('ranking-list');
+const minusRankingList = document.getElementById('minus-ranking-list');
 const rankingBtn = document.getElementById('rankingBtn');
 const closeRankingBtn = document.getElementById('closeRankingBtn');
 const nameInputModal = document.getElementById('name-input-modal');
@@ -3266,12 +3267,14 @@ function updatePlayerNameDisplay() {
 
 // Real-time ranking listener
 let unsubscribeRanking = null;
+let unsubscribeMinusRanking = null;
 
 function showRanking() {
     rankingList.innerHTML = '<div class="loading">読み込み中</div>';
+    minusRankingList.innerHTML = '<div class="loading">読み込み中</div>';
     rankingScreen.classList.remove('hidden');
 
-    // Set up real-time listener
+    // Set up real-time listener for positive rankings
     const q = query(
         collection(db, "rankings"),
         orderBy("distance", "desc"),
@@ -3320,6 +3323,61 @@ function showRanking() {
         console.error("Error fetching rankings:", error);
         rankingList.innerHTML = '<div class="no-records">エラーが発生しました</div>';
     });
+
+    // Set up real-time listener for minus rankings (negative distances)
+    const minusQuery = query(
+        collection(db, "rankings"),
+        orderBy("distance", "asc"),
+        limit(10)
+    );
+
+    const minusRankIcons = ['🏴', '🟤', '🟣'];
+    const minusRankClasses = ['minus-first', 'minus-second', 'minus-third'];
+
+    unsubscribeMinusRanking = onSnapshot(minusQuery, (snapshot) => {
+        minusRankingList.innerHTML = '';
+
+        // Filter for negative distances only
+        const minusRecords = snapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(record => record.distance < 0)
+            .slice(0, 3);
+
+        if (minusRecords.length === 0) {
+            minusRankingList.innerHTML = '<div class="no-records">まだ誰も後ろに飛んでいません...</div>';
+            return;
+        }
+
+        minusRecords.forEach((record, index) => {
+            const item = document.createElement('div');
+            item.className = 'ranking-item ' + minusRankClasses[index];
+
+            // Highlight own scores
+            if (record.userId === currentUserId) {
+                item.style.borderLeft = '3px solid #ff6b6b';
+            }
+
+            let dateStr = '-';
+            if (record.createdAt) {
+                const date = record.createdAt.toDate();
+                dateStr = `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')}`;
+            }
+
+            item.innerHTML = `
+                <div class="rank-number">${minusRankIcons[index]}</div>
+                <div class="rank-info">
+                    <div class="rank-name">${escapeHtml(record.playerName || '名無し')}</div>
+                    <div class="rank-distance minus">${record.distance.toFixed(2)}m</div>
+                    <div class="rank-details">${record.damage}% | ${record.maxCombo} Combo</div>
+                </div>
+                <div class="rank-date">${dateStr}</div>
+            `;
+            minusRankingList.appendChild(item);
+        });
+    }, (error) => {
+        console.error("Error fetching minus rankings:", error);
+        minusRankingList.innerHTML = '<div class="no-records">エラーが発生しました</div>';
+    });
 }
 
 // Escape HTML to prevent XSS
@@ -3333,6 +3391,10 @@ function hideRanking() {
     if (unsubscribeRanking) {
         unsubscribeRanking();
         unsubscribeRanking = null;
+    }
+    if (unsubscribeMinusRanking) {
+        unsubscribeMinusRanking();
+        unsubscribeMinusRanking = null;
     }
     rankingScreen.classList.add('hidden');
 }
