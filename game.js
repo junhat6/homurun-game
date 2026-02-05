@@ -4172,6 +4172,16 @@ function resetGame() {
   startGame();
 }
 
+// Rキーでスタート画面に戻る
+function returnToStart() {
+  state.phase = 'start';
+  startScreen.classList.remove('hidden');
+  resultScreen.classList.add('hidden');
+  rankingScreen.classList.add('hidden');
+  distanceEl.classList.add('hidden');
+  chargeBar.classList.add('hidden');
+}
+
 // Input Handling (Enhanced)
 document.addEventListener('keydown', (e) => {
   if (e.repeat) return;
@@ -4220,6 +4230,10 @@ document.addEventListener('keydown', (e) => {
     case 'Enter':
       if (state.phase === 'start') startGame();
       else if (state.phase === 'result' || !rankingScreen.classList.contains('hidden')) resetGame();
+      break;
+    case 'KeyR':
+      // どの画面からでもスタート画面に戻る
+      returnToStart();
       break;
   }
 });
