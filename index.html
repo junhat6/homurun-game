@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Homurun Contest - ホームランコンテスト</title>
+    <title>Homurun Contest - 坪打ちコンテスト</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -33,7 +33,7 @@
             <div id="countdown-text">2</div>
         </div>
         <div id="start-screen">
-            <h1>ホームランコンテスト</h1>
+            <h1>坪打ちコンテスト</h1>
             <div class="controls">
                 <h3>基本操作</h3>
                 <p><kbd>A</kbd> <kbd>D</kbd> : 移動（長押しでダッシュ）</p>
@@ -56,6 +56,10 @@
         </div>
         <div id="result-screen" class="hidden">
             <h1>結果発表</h1>
+            <div id="player-name-display">
+                <span id="current-player-name">名無し</span>
+                <button id="changeNameBtn" class="small-btn">変更</button>
+            </div>
             <div id="new-record" style="display:none;">NEW RECORD!</div>
             <div id="rating"></div>
             <div id="final-distance">0.00m</div>
@@ -67,12 +71,23 @@
             </div>
         </div>
         <div id="ranking-screen" class="hidden">
-            <h1>自己ベスト TOP 10</h1>
+            <h1>🏆 ランキング TOP 10</h1>
             <div id="ranking-list"></div>
             <button id="closeRankingBtn">CLOSE</button>
         </div>
+        <div id="name-input-modal" class="hidden">
+            <div class="modal-content">
+                <h2>ランキング登録</h2>
+                <p>あなたの記録: <span id="modal-distance"></span></p>
+                <input type="text" id="player-name-input" placeholder="名前を入力" maxlength="12">
+                <div class="modal-buttons">
+                    <button id="submitNameBtn">登録</button>
+                    <button id="skipNameBtn" class="secondary">スキップ</button>
+                </div>
+            </div>
+        </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/planck@latest/dist/planck.min.js"></script>
-    <script src="game.js"></script>
+    <script type="module" src="game.js"></script>
 </body>
 </html>

@@ -2,6 +2,36 @@
 // Homurun Contest - Pro Fighting Game Style
 // ============================================
 
+// Firebase imports
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.0/firebase-app.js";
+import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.8.0/firebase-firestore.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.8.0/firebase-auth.js";
+
+// Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyAaeP21JhnsmcP9TfmiwodaTwF7sIzxfPI",
+    authDomain: "homurun-game.firebaseapp.com",
+    projectId: "homurun-game",
+    storageBucket: "homurun-game.firebasestorage.app",
+    messagingSenderId: "629050620178",
+    appId: "1:629050620178:web:2e582c40f4b5889afb9bcb",
+    measurementId: "G-SGKKNSPQ4R"
+};
+
+// Initialize Firebase
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getFirestore(firebaseApp);
+const auth = getAuth(firebaseApp);
+
+// Anonymous auth
+let currentUserId = null;
+signInAnonymously(auth).then((userCredential) => {
+    currentUserId = userCredential.user.uid;
+    console.log("Firebase Auth: Anonymous user signed in");
+}).catch((error) => {
+    console.error("Firebase Auth error:", error);
+});
+
 const { World, Vec2, Box, Circle, Edge } = planck;
 
 // Game Configuration
@@ -401,7 +431,7 @@ const state = {
     lastHitTime: 0,
     comboTimer: 0,
     distance: 0,
-    maxDistance: 0,
+    maxDistance: null,
     launched: false,
     hitstop: 0,         // グローバルヒットストップ
     slowMotion: 0,      // スローモーション残り時間
@@ -817,6 +847,16 @@ const rankingScreen = document.getElementById('ranking-screen');
 const rankingList = document.getElementById('ranking-list');
 const rankingBtn = document.getElementById('rankingBtn');
 const closeRankingBtn = document.getElementById('closeRankingBtn');
+const nameInputModal = document.getElementById('name-input-modal');
+const playerNameInput = document.getElementById('player-name-input');
+const submitNameBtn = document.getElementById('submitNameBtn');
+const skipNameBtn = document.getElementById('skipNameBtn');
+const modalDistance = document.getElementById('modal-distance');
+const currentPlayerNameEl = document.getElementById('current-player-name');
+const changeNameBtn = document.getElementById('changeNameBtn');
+
+// Pending score for ranking submission
+let pendingScore = null;
 
 // Physics
 let world, ground, platform, sandbag, playerBody;
@@ -1200,7 +1240,7 @@ function createBloodPool(x, y) {
 function updateBodyParts(dt) {
     if (bodyParts.length === 0) return;
 
-    let farthestDistance = 0;
+    let farthestDistance = null;
     let farthestPart = null;
 
     for (const part of bodyParts) {
@@ -1209,9 +1249,23 @@ function updateBodyParts(dt) {
 
         // 距離を計算
         const distance = pos.x - part.startX;
-        if (distance > farthestDistance) {
+
+        // 一番遠いパーツを選択（プラス優先、同じ符号なら絶対値で比較）
+        if (farthestDistance === null) {
             farthestDistance = distance;
             farthestPart = part;
+        } else if (distance >= 0 && farthestDistance < 0) {
+            // 新しいのがプラスで既存がマイナス → 新しい方を採用
+            farthestDistance = distance;
+            farthestPart = part;
+        } else if (distance < 0 && farthestDistance >= 0) {
+            // 新しいのがマイナスで既存がプラス → 既存をキープ
+        } else {
+            // 同じ符号なら絶対値で比較
+            if (Math.abs(distance) > Math.abs(farthestDistance)) {
+                farthestDistance = distance;
+                farthestPart = part;
+            }
         }
 
         // 出血エフェクト
@@ -1242,8 +1296,20 @@ function updateBodyParts(dt) {
     // 一番遠くのパーツを更新
     if (farthestPart) {
         state.farthestPart = farthestPart;
-        state.distance = Math.max(0, farthestDistance);
-        state.maxDistance = Math.max(state.maxDistance, state.distance);
+        state.distance = farthestDistance;
+        // maxDistanceを更新（プラス > マイナス。同じ符号なら絶対値で比較）
+        if (state.maxDistance === null) {
+            state.maxDistance = state.distance;
+        } else if (state.distance >= 0 && state.maxDistance < 0) {
+            state.maxDistance = state.distance;
+        } else if (state.distance < 0 && state.maxDistance >= 0) {
+            // プラスのままキープ
+        } else {
+            // 同じ符号なら絶対値で比較
+            if (Math.abs(state.distance) > Math.abs(state.maxDistance)) {
+                state.maxDistance = state.distance;
+            }
+        }
     }
 
     // 血しぶきの更新
@@ -2235,8 +2301,20 @@ function updateSandbag(dt) {
     // 飛行フェーズ
     if (state.phase === 'flying' && !state.dismembered) {
         const pos = sandbag.getPosition();
-        state.distance = Math.max(0, pos.x - sandbag.startX);
-        state.maxDistance = Math.max(state.maxDistance, state.distance);
+        state.distance = pos.x - sandbag.startX;
+        // maxDistanceを更新（プラス > マイナス。同じ符号なら絶対値で比較）
+        if (state.maxDistance === null) {
+            state.maxDistance = state.distance;
+        } else if (state.distance >= 0 && state.maxDistance < 0) {
+            state.maxDistance = state.distance;
+        } else if (state.distance < 0 && state.maxDistance >= 0) {
+            // プラスのままキープ
+        } else {
+            // 同じ符号なら絶対値で比較
+            if (Math.abs(state.distance) > Math.abs(state.maxDistance)) {
+                state.maxDistance = state.distance;
+            }
+        }
 
         const vel = sandbag.getLinearVelocity();
 
@@ -2281,9 +2359,9 @@ function draw() {
     // バラバラフェーズでは一番遠いパーツを追跡
     if (state.phase === 'flying') {
         if (state.dismembered && state.farthestPart) {
-            cameraX = Math.max(0, (state.farthestPart.body.getPosition().x - 10) * CONFIG.physics.scale);
+            cameraX = (state.farthestPart.body.getPosition().x - 10) * CONFIG.physics.scale;
         } else if (sandbag) {
-            cameraX = Math.max(0, (sandbag.getPosition().x - 10) * CONFIG.physics.scale);
+            cameraX = (sandbag.getPosition().x - 10) * CONFIG.physics.scale;
         }
     }
 
@@ -2346,7 +2424,7 @@ function drawDistanceMarkers(cameraX) {
     ctx.textAlign = 'center';
 
     const startM = Math.floor(cameraX / CONFIG.physics.scale / 5) * 5;
-    for (let m = Math.max(0, startM); m < startM + 40; m += 5) {
+    for (let m = startM; m < startM + 40; m += 5) {
         const x = m * CONFIG.physics.scale;
         const y = CONFIG.canvas.height - CONFIG.physics.scale - 60;
 
@@ -2929,11 +3007,12 @@ function updateUI() {
     }
 
     if (state.phase === 'flying' || state.phase === 'result') {
+        const displayDistance = state.maxDistance !== null ? state.maxDistance : 0;
         // バラバラの場合は一番遠くのパーツを表示
         if (state.dismembered && state.farthestPart && state.farthestPart.def) {
-            distanceEl.textContent = `${state.farthestPart.def.name}: ${state.maxDistance.toFixed(2)}m`;
+            distanceEl.textContent = `${state.farthestPart.def.name}: ${displayDistance.toFixed(2)}m`;
         } else {
-            distanceEl.textContent = `Distance: ${state.maxDistance.toFixed(2)}m`;
+            distanceEl.textContent = `Distance: ${displayDistance.toFixed(2)}m`;
         }
     }
 }
@@ -3001,11 +3080,13 @@ function gameLoop(currentTime) {
 function showResult() {
     state.phase = 'result';
     resultScreen.classList.remove('hidden');
-    
-    // 結果表示音を再生
-    playResultSound(state.maxDistance);
 
-    const distance = state.maxDistance;
+    // プレイヤー名を表示
+    updatePlayerNameDisplay();
+
+    // 結果表示音を再生
+    const distance = state.maxDistance !== null ? state.maxDistance : 0;
+    playResultSound(distance);
 
     // 一番遠くのパーツの名前を表示
     let partName = '';
@@ -3021,14 +3102,27 @@ function showResult() {
     }
     maxComboEl.textContent = `Max Combo: ${state.maxCombo}`;
 
-    // ランキングに保存
-    const rank = saveToRanking(distance, state.damage, state.maxCombo);
+    // ランキング登録モーダルを表示
+    promptForRanking(distance, state.damage, state.maxCombo);
 
     // ベストスコア処理
     const bestScore = parseFloat(localStorage.getItem('homurun_best') || '0');
-    const isNewRecord = distance > bestScore;
+    // 新しい記録がプラスで旧記録がマイナス → 新記録
+    // 両方プラス → 大きい方が新記録
+    // 両方マイナス → 絶対値が大きい方が新記録
+    // 新しい記録がマイナスで旧記録がプラス → 新記録ではない
+    let isNewRecord = false;
+    if (distance > 0 && bestScore <= 0) {
+        isNewRecord = true;
+    } else if (distance <= 0 && bestScore > 0) {
+        isNewRecord = false;
+    } else if (distance > 0) {
+        isNewRecord = distance > bestScore;
+    } else {
+        isNewRecord = Math.abs(distance) > Math.abs(bestScore);
+    }
 
-    if (isNewRecord && distance > 0) {
+    if (isNewRecord && distance !== 0) {
         localStorage.setItem('homurun_best', distance.toFixed(2));
     }
 
@@ -3043,7 +3137,7 @@ function showResult() {
     // 新記録表示
     const recordEl = document.getElementById('new-record');
     if (recordEl) {
-        recordEl.style.display = isNewRecord && distance > 0 ? 'block' : 'none';
+        recordEl.style.display = isNewRecord && distance !== 0 ? 'block' : 'none';
     }
 
     // 距離に応じた評価
@@ -3063,55 +3157,158 @@ function showResult() {
 }
 
 // ============================================
-// Ranking System
+// Ranking System (Firebase)
 // ============================================
-function saveToRanking(distance, damage, maxCombo) {
-    if (distance <= 0) return;
 
-    // ランキングを読み込み
-    const rankings = JSON.parse(localStorage.getItem('homurun_rankings') || '[]');
-
-    // 新しい記録を追加
-    const record = {
-        distance: parseFloat(distance.toFixed(2)),
-        damage: Math.floor(damage),
-        maxCombo: maxCombo,
-        date: new Date().toISOString()
-    };
-    rankings.push(record);
-
-    // 距離で降順ソートしてTop 10のみ保持
-    rankings.sort((a, b) => b.distance - a.distance);
-    const top10 = rankings.slice(0, 10);
-
-    localStorage.setItem('homurun_rankings', JSON.stringify(top10));
-
-    // 今回の記録が何位かを返す
-    const rank = top10.findIndex(r => r.date === record.date);
-    return rank >= 0 ? rank + 1 : -1;
+// Check if name input modal is open (to prevent key conflicts)
+function isNameModalOpen() {
+    return !nameInputModal.classList.contains('hidden');
 }
 
+// Show name input modal after game ends (only if no saved name)
+function promptForRanking(distance, damage, maxCombo) {
+    if (distance === 0) return;
+
+    const savedName = localStorage.getItem('homurun_player_name');
+
+    // 名前が保存されていれば自動登録
+    if (savedName) {
+        saveToRankingDirect(savedName, distance, damage, maxCombo);
+        return;
+    }
+
+    // 初回のみモーダル表示
+    pendingScore = {
+        distance: parseFloat(distance.toFixed(2)),
+        damage: Math.floor(damage),
+        maxCombo: maxCombo
+    };
+
+    modalDistance.textContent = `${distance.toFixed(2)}m`;
+    playerNameInput.value = '';
+    nameInputModal.classList.remove('hidden');
+    setTimeout(() => playerNameInput.focus(), 100);
+}
+
+// Direct save without modal (for auto-save)
+async function saveToRankingDirect(playerName, distance, damage, maxCombo) {
+    try {
+        await addDoc(collection(db, "rankings"), {
+            playerName: playerName || "名無し",
+            distance: parseFloat(distance.toFixed(2)),
+            damage: Math.floor(damage),
+            maxCombo: maxCombo,
+            userId: currentUserId,
+            createdAt: serverTimestamp()
+        });
+        console.log("Score auto-saved");
+    } catch (error) {
+        console.error("Error saving score:", error);
+    }
+}
+
+// Save score to Firebase (from modal)
+async function saveToRanking(playerName) {
+    const nameToSave = playerName || "名無し";
+
+    // Remember player name
+    localStorage.setItem('homurun_player_name', nameToSave);
+    updatePlayerNameDisplay();
+
+    // If we have a pending score, save it to Firebase
+    if (pendingScore) {
+        try {
+            await addDoc(collection(db, "rankings"), {
+                playerName: nameToSave,
+                distance: pendingScore.distance,
+                damage: pendingScore.damage,
+                maxCombo: pendingScore.maxCombo,
+                userId: currentUserId,
+                createdAt: serverTimestamp()
+            });
+            console.log("Score saved");
+        } catch (error) {
+            console.error("Error saving score:", error);
+        }
+    }
+
+    pendingScore = null;
+    nameInputModal.classList.add('hidden');
+}
+
+// Submit name and save
+function submitName() {
+    const name = playerNameInput.value.trim();
+    saveToRanking(name);
+}
+
+// Skip name input (save as 名無し)
+function skipName() {
+    saveToRanking("名無し");
+}
+
+// Change name (from result screen)
+function showChangeNameModal() {
+    pendingScore = null; // Don't save to ranking, just change name
+    modalDistance.textContent = '名前変更';
+    playerNameInput.value = localStorage.getItem('homurun_player_name') || '';
+    nameInputModal.classList.remove('hidden');
+    setTimeout(() => playerNameInput.focus(), 100);
+}
+
+// Update displayed player name
+function updatePlayerNameDisplay() {
+    const name = localStorage.getItem('homurun_player_name') || '名無し';
+    if (currentPlayerNameEl) {
+        currentPlayerNameEl.textContent = name;
+    }
+}
+
+// Real-time ranking listener
+let unsubscribeRanking = null;
+
 function showRanking() {
-    const rankings = JSON.parse(localStorage.getItem('homurun_rankings') || '[]');
+    rankingList.innerHTML = '<div class="loading">読み込み中</div>';
+    rankingScreen.classList.remove('hidden');
 
-    rankingList.innerHTML = '';
+    // Set up real-time listener
+    const q = query(
+        collection(db, "rankings"),
+        orderBy("distance", "desc"),
+        limit(10)
+    );
 
-    if (rankings.length === 0) {
-        rankingList.innerHTML = '<div class="no-records">記録がありません</div>';
-    } else {
-        rankings.forEach((record, index) => {
+    unsubscribeRanking = onSnapshot(q, (snapshot) => {
+        rankingList.innerHTML = '';
+
+        if (snapshot.empty) {
+            rankingList.innerHTML = '<div class="no-records">記録がありません</div>';
+            return;
+        }
+
+        snapshot.docs.forEach((doc, index) => {
+            const record = doc.data();
             const item = document.createElement('div');
             item.className = 'ranking-item';
             if (index === 0) item.classList.add('gold');
             else if (index === 1) item.classList.add('silver');
             else if (index === 2) item.classList.add('bronze');
 
-            const date = new Date(record.date);
-            const dateStr = `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')}`;
+            // Highlight own scores
+            if (record.userId === currentUserId) {
+                item.style.borderLeft = '3px solid #4a90d9';
+            }
+
+            let dateStr = '-';
+            if (record.createdAt) {
+                const date = record.createdAt.toDate();
+                dateStr = `${date.getFullYear()}/${(date.getMonth()+1).toString().padStart(2,'0')}/${date.getDate().toString().padStart(2,'0')}`;
+            }
 
             item.innerHTML = `
                 <div class="rank-number">${index + 1}</div>
                 <div class="rank-info">
+                    <div class="rank-name">${escapeHtml(record.playerName || '名無し')}</div>
                     <div class="rank-distance">${record.distance.toFixed(2)}m</div>
                     <div class="rank-details">${record.damage}% | ${record.maxCombo} Combo</div>
                 </div>
@@ -3119,12 +3316,24 @@ function showRanking() {
             `;
             rankingList.appendChild(item);
         });
-    }
+    }, (error) => {
+        console.error("Error fetching rankings:", error);
+        rankingList.innerHTML = '<div class="no-records">エラーが発生しました</div>';
+    });
+}
 
-    rankingScreen.classList.remove('hidden');
+// Escape HTML to prevent XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
 function hideRanking() {
+    if (unsubscribeRanking) {
+        unsubscribeRanking();
+        unsubscribeRanking = null;
+    }
     rankingScreen.classList.add('hidden');
 }
 
@@ -3141,7 +3350,7 @@ function startGame() {
     state.maxCombo = 0;
     state.comboTimer = 0;
     state.distance = 0;
-    state.maxDistance = 0;
+    state.maxDistance = null;
     state.launched = false;
     state.hitstop = 0;
     state.slowMotion = 0;
@@ -3250,6 +3459,9 @@ function resetGame() {
 document.addEventListener('keydown', (e) => {
     if (e.repeat) return;
 
+    // モーダルが開いている間はゲーム操作を無効化
+    if (isNameModalOpen()) return;
+
     switch (e.code) {
         case 'KeyA': case 'ArrowLeft':
             input.left = true;
@@ -3318,6 +3530,16 @@ startBtn.addEventListener('click', startGame);
 retryBtn.addEventListener('click', resetGame);
 rankingBtn.addEventListener('click', showRanking);
 closeRankingBtn.addEventListener('click', hideRanking);
+submitNameBtn.addEventListener('click', submitName);
+skipNameBtn.addEventListener('click', skipName);
+changeNameBtn.addEventListener('click', showChangeNameModal);
+playerNameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        submitName();
+    }
+});
 
 // Initialize
 function init() {
