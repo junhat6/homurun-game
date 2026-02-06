@@ -4,7 +4,7 @@
 
 // Firebase imports
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.0/firebase-app.js";
-import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.8.0/firebase-firestore.js";
+import { getFirestore, collection, addDoc, query, orderBy, limit, onSnapshot, serverTimestamp, where, getDocs, getCountFromServer } from "https://www.gstatic.com/firebasejs/11.8.0/firebase-firestore.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.8.0/firebase-auth.js";
 
 // Firebase configuration
@@ -27,7 +27,7 @@ const auth = getAuth(firebaseApp);
 let currentUserId = null;
 signInAnonymously(auth).then((userCredential) => {
   currentUserId = userCredential.user.uid;
-  console.log("Firebase Auth: Anonymous user signed in");
+  console.log("Firebase Auth: Anonymous user signed in, uid:", currentUserId);
 }).catch((error) => {
   console.error("Firebase Auth error:", error);
 });
@@ -3935,13 +3935,15 @@ function showRanking() {
     limit(10)
   );
 
-  unsubscribeRanking = onSnapshot(q, (snapshot) => {
+  unsubscribeRanking = onSnapshot(q, async (snapshot) => {
     rankingList.innerHTML = '';
 
     if (snapshot.empty) {
       rankingList.innerHTML = '<div class="no-records">記録がありません</div>';
       return;
     }
+
+    let userInTop10 = false;
 
     snapshot.docs.forEach((doc, index) => {
       const record = doc.data();
@@ -3954,6 +3956,7 @@ function showRanking() {
       // Highlight own scores
       if (record.userId === currentUserId) {
         item.style.borderLeft = '3px solid #4a90d9';
+        userInTop10 = true;
       }
 
       let dateStr = '-';
@@ -3973,6 +3976,61 @@ function showRanking() {
             `;
       rankingList.appendChild(item);
     });
+
+    // Show user's rank if outside TOP10
+    if (!userInTop10 && currentUserId) {
+      try {
+        const userBestQuery = query(
+          collection(db, "rankings"),
+          where("userId", "==", currentUserId),
+          where("distance", ">", 0),
+          orderBy("distance", "desc"),
+          limit(1)
+        );
+        const userBestSnap = await getDocs(userBestQuery);
+
+        if (!userBestSnap.empty) {
+          const bestRecord = userBestSnap.docs[0].data();
+          const bestDistance = bestRecord.distance;
+
+          const higherQuery = query(
+            collection(db, "rankings"),
+            where("distance", ">", bestDistance)
+          );
+          const countSnap = await getCountFromServer(higherQuery);
+          const userRank = countSnap.data().count + 1;
+
+          // Add separator
+          const separator = document.createElement('div');
+          separator.className = 'ranking-separator';
+          separator.textContent = '・・・';
+          rankingList.appendChild(separator);
+
+          // Add user's rank entry
+          const item = document.createElement('div');
+          item.className = 'ranking-item user-rank-item';
+
+          let dateStr = '-';
+          if (bestRecord.createdAt) {
+            const date = bestRecord.createdAt.toDate();
+            dateStr = `${date.getFullYear()}/${(date.getMonth() + 1).toString().padStart(2, '0')}/${date.getDate().toString().padStart(2, '0')}`;
+          }
+
+          item.innerHTML = `
+                <div class="rank-number">${userRank}</div>
+                <div class="rank-info">
+                    <div class="rank-name">${escapeHtml(bestRecord.playerName || '名無し')}</div>
+                    <div class="rank-distance">${bestRecord.distance.toFixed(2)}m</div>
+                    <div class="rank-details">${bestRecord.damage}% | ${bestRecord.maxCombo} Combo</div>
+                </div>
+                <div class="rank-date">${dateStr}</div>
+            `;
+          rankingList.appendChild(item);
+        }
+      } catch (e) {
+        console.error("Error fetching user rank:", e);
+      }
+    }
   }, (error) => {
     console.error("Error fetching rankings:", error);
     rankingList.innerHTML = '<div class="no-records">エラーが発生しました</div>';
@@ -4039,6 +4097,11 @@ function escapeHtml(text) {
   div.textContent = text;
   return div.innerHTML;
 }
+
+// Debug: test ranking as a different user from console
+// Usage: debugSetUserId("fake-id") then reopen ranking
+window.debugSetUserId = (id) => { currentUserId = id; console.log("currentUserId set to:", id); };
+window.debugResetUserId = () => { signInAnonymously(auth).then(c => { currentUserId = c.user.uid; console.log("currentUserId reset to:", currentUserId); }); };
 
 function hideRanking() {
   if (unsubscribeRanking) {

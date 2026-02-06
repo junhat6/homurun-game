@@ -660,6 +660,22 @@ button.secondary:hover {
     font-size: 14px;
 }
 
+/* Ranking separator */
+.ranking-separator {
+    text-align: center;
+    padding: 8px 0;
+    color: #666;
+    font-size: 20px;
+    letter-spacing: 4px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* User rank item (outside TOP10) */
+.ranking-item.user-rank-item {
+    background: rgba(74, 144, 217, 0.1);
+    border-left: 3px solid #4a90d9;
+}
+
 #closeRankingBtn {
     margin-top: 25px;
 }
