@@ -123,8 +123,8 @@ const CONFIG = {
     // 弱攻撃1 - 発生が早い、コンボ始動
     weak: {
       damage: 2.5,
-      baseKnockback: 15,
-      knockbackGrowth: 25,    // コンボ継続性維持
+      baseKnockback: 23,
+      knockbackGrowth: 38,    // コンボ継続性維持
       angle: 70,              // やや上に飛ばしてコンボ継続
       startup: 0.033,         // 2F
       active: 0.05,           // 3F
@@ -139,8 +139,8 @@ const CONFIG = {
     // 弱攻撃2段目
     weak2: {
       damage: 2.5,
-      baseKnockback: 18,
-      knockbackGrowth: 30,    // コンボ継続性維持
+      baseKnockback: 27,
+      knockbackGrowth: 45,    // コンボ継続性維持
       angle: 72,
       startup: 0.033,
       active: 0.05,
@@ -155,8 +155,8 @@ const CONFIG = {
     // 弱攻撃3段目（フィニッシュブロー）
     weak3: {
       damage: 4,
-      baseKnockback: 35,
-      knockbackGrowth: 55,
+      baseKnockback: 53,
+      knockbackGrowth: 83,
       angle: 50,              // 斜め上に飛ばす
       startup: 0.067,         // 4F
       active: 0.067,
@@ -172,8 +172,8 @@ const CONFIG = {
     // 横強攻撃 - 角度調整可能、リーチ長め
     strong: {
       damage: 8,
-      baseKnockback: 30,
-      knockbackGrowth: 65,
+      baseKnockback: 45,
+      knockbackGrowth: 98,
       angle: 35,              // 横に飛ばす
       startup: 0.083,         // 5F
       active: 0.083,
@@ -189,8 +189,8 @@ const CONFIG = {
     // 上強 - ジャグリング用、お手玉の起点
     upperStrong: {
       damage: 7,
-      baseKnockback: 32,
-      knockbackGrowth: 70,
+      baseKnockback: 48,
+      knockbackGrowth: 105,
       angle: 88,              // ほぼ真上
       startup: 0.067,         // 4F
       active: 0.1,
@@ -206,8 +206,8 @@ const CONFIG = {
     // 下強 - 低姿勢、低角度で飛ばす
     downStrong: {
       damage: 6,
-      baseKnockback: 25,
-      knockbackGrowth: 55,
+      baseKnockback: 38,
+      knockbackGrowth: 83,
       angle: 20,              // 低角度（テクニカル）
       startup: 0.05,          // 3F 発生早い
       active: 0.1,
@@ -499,7 +499,7 @@ function lerpColor(color1, color2, t) {
   const c1 = hexToRgb(color1);
   const c2 = hexToRgb(color2);
   if (!c1 || !c2) return color1;
-  
+
   const r = c1.r + (c2.r - c1.r) * t;
   const g = c1.g + (c2.g - c1.g) * t;
   const b = c1.b + (c2.b - c1.b) * t;
@@ -509,22 +509,22 @@ function lerpColor(color1, color2, t) {
 // 距離に応じたテーマを取得（遷移を含む）
 function getBackgroundTheme(distance) {
   const transitionWidth = 20; // 遷移幅（m）
-  
+
   // 現在のテーマと次のテーマを見つける
   let currentTheme = BACKGROUND_THEMES[0];
   let nextTheme = null;
   let transitionProgress = 0;
-  
+
   for (let i = 0; i < BACKGROUND_THEMES.length; i++) {
     const theme = BACKGROUND_THEMES[i];
     if (distance >= theme.minDistance && distance < theme.maxDistance) {
       currentTheme = theme;
-      
+
       // 次のテーマへの遷移をチェック
       if (i < BACKGROUND_THEMES.length - 1) {
         const nextT = BACKGROUND_THEMES[i + 1];
         const distToNext = theme.maxDistance - distance;
-        
+
         if (distToNext <= transitionWidth) {
           nextTheme = nextT;
           transitionProgress = 1 - (distToNext / transitionWidth);
@@ -533,7 +533,7 @@ function getBackgroundTheme(distance) {
       break;
     }
   }
-  
+
   // 遷移中の場合、色を補間
   if (nextTheme && transitionProgress > 0) {
     return {
@@ -543,7 +543,7 @@ function getBackgroundTheme(distance) {
         middle: lerpColor(currentTheme.sky.middle, nextTheme.sky.middle, transitionProgress),
         bottom: lerpColor(currentTheme.sky.bottom, nextTheme.sky.bottom, transitionProgress)
       },
-      ground: currentTheme.ground && nextTheme.ground 
+      ground: currentTheme.ground && nextTheme.ground
         ? lerpColor(currentTheme.ground, nextTheme.ground, transitionProgress)
         : (transitionProgress < 0.5 ? currentTheme.ground : nextTheme.ground),
       elements: transitionProgress < 0.5 ? currentTheme.elements : nextTheme.elements,
@@ -552,7 +552,7 @@ function getBackgroundTheme(distance) {
       nextTheme: nextTheme
     };
   }
-  
+
   return {
     ...currentTheme,
     transitionProgress: 0,
@@ -567,7 +567,7 @@ function drawBackgroundElements(cameraX, elements, distance, groundY, cameraY = 
   const baseX = cameraX * parallaxFactor;
 
   elements.forEach(element => {
-    switch(element) {
+    switch (element) {
       case 'grass':
         drawGrass(cameraX, groundY);
         break;
@@ -608,7 +608,7 @@ function drawGrass(cameraX, groundY) {
   const grassWidth = 3;
   const grassSpacing = 15;
   const startX = Math.floor(cameraX / grassSpacing) * grassSpacing;
-  
+
   for (let x = startX; x < cameraX + CONFIG.canvas.width + grassSpacing; x += grassSpacing) {
     const height = 8 + Math.sin(x * 0.1) * 4;
     ctx.beginPath();
@@ -625,15 +625,15 @@ function drawTrees(baseX, groundY) {
   ctx.fillStyle = '#228B22';
   const treeSpacing = 200;
   const startX = Math.floor(baseX / treeSpacing) * treeSpacing;
-  
+
   for (let x = startX; x < baseX + CONFIG.canvas.width / 0.3 + treeSpacing; x += treeSpacing) {
     const screenX = x - baseX + 50;
     const treeHeight = 60 + Math.sin(x * 0.01) * 20;
-    
+
     // 幹
     ctx.fillStyle = '#8B4513';
     ctx.fillRect(screenX - 5, groundY - treeHeight, 10, treeHeight * 0.4);
-    
+
     // 葉
     ctx.fillStyle = '#228B22';
     ctx.beginPath();
@@ -646,16 +646,16 @@ function drawTrees(baseX, groundY) {
 function drawHouses(baseX, groundY) {
   const houseSpacing = 300;
   const startX = Math.floor(baseX / houseSpacing) * houseSpacing;
-  
+
   for (let x = startX; x < baseX + CONFIG.canvas.width / 0.3 + houseSpacing; x += houseSpacing) {
     const screenX = x - baseX + 100;
     const houseWidth = 50;
     const houseHeight = 35;
-    
+
     // 壁
     ctx.fillStyle = '#F5DEB3';
     ctx.fillRect(screenX - houseWidth / 2, groundY - houseHeight, houseWidth, houseHeight);
-    
+
     // 屋根
     ctx.fillStyle = '#8B0000';
     ctx.beginPath();
@@ -664,7 +664,7 @@ function drawHouses(baseX, groundY) {
     ctx.lineTo(screenX + houseWidth / 2 + 5, groundY - houseHeight);
     ctx.closePath();
     ctx.fill();
-    
+
     // 窓
     ctx.fillStyle = '#87CEEB';
     ctx.fillRect(screenX - 10, groundY - houseHeight + 10, 8, 8);
@@ -676,12 +676,12 @@ function drawHouses(baseX, groundY) {
 function drawWindmills(baseX, groundY) {
   const windmillSpacing = 400;
   const startX = Math.floor(baseX / windmillSpacing) * windmillSpacing + 150;
-  
+
   for (let x = startX; x < baseX + CONFIG.canvas.width / 0.3 + windmillSpacing; x += windmillSpacing) {
     const screenX = x - baseX;
     const height = 80;
     const time = Date.now() / 1000;
-    
+
     // 塔
     ctx.fillStyle = '#F5F5DC';
     ctx.beginPath();
@@ -691,7 +691,7 @@ function drawWindmills(baseX, groundY) {
     ctx.lineTo(screenX - 4, groundY - height);
     ctx.closePath();
     ctx.fill();
-    
+
     // 羽根
     ctx.strokeStyle = '#654321';
     ctx.lineWidth = 3;
@@ -713,11 +713,11 @@ function drawWindmills(baseX, groundY) {
 function drawMountains(baseX, groundY) {
   const mountainSpacing = 250;
   const startX = Math.floor(baseX / mountainSpacing) * mountainSpacing;
-  
+
   for (let x = startX; x < baseX + CONFIG.canvas.width / 0.3 + mountainSpacing; x += mountainSpacing) {
     const screenX = x - baseX;
     const height = 150 + Math.sin(x * 0.005) * 50;
-    
+
     // 山本体
     ctx.fillStyle = '#4A5D4A';
     ctx.beginPath();
@@ -726,7 +726,7 @@ function drawMountains(baseX, groundY) {
     ctx.lineTo(screenX + 100, groundY);
     ctx.closePath();
     ctx.fill();
-    
+
     // 雪冠
     ctx.fillStyle = '#FFFFFF';
     ctx.beginPath();
@@ -742,15 +742,15 @@ function drawMountains(baseX, groundY) {
 function drawConifers(baseX, groundY) {
   const treeSpacing = 120;
   const startX = Math.floor(baseX / treeSpacing) * treeSpacing;
-  
+
   for (let x = startX; x < baseX + CONFIG.canvas.width / 0.3 + treeSpacing; x += treeSpacing) {
     const screenX = x - baseX + 30;
     const treeHeight = 50 + Math.sin(x * 0.02) * 15;
-    
+
     // 幹
     ctx.fillStyle = '#654321';
     ctx.fillRect(screenX - 4, groundY - treeHeight * 0.3, 8, treeHeight * 0.3);
-    
+
     // 三角形の葉
     ctx.fillStyle = '#1B4D1B';
     ctx.beginPath();
@@ -2440,7 +2440,7 @@ function applyHit(attack, direction, hitType = 'normal') {
   // ノックバックベクトル（物理エンジン用にスケーリング）
   // ノックバック値を物理エンジンが扱える範囲にスケーリング
   // 高%でより飛ぶように、平方根ではなく線形スケーリングを使用
-  const physicsScale = 0.20;  // 物理エンジン用スケール係数（1000m到達用）
+  const physicsScale = 0.25;  // 物理エンジン用スケール係数（1000m到達用）
   const scaledKnockback = knockback * physicsScale;
 
   console.log(`[KB Debug] Final knockback=${knockback.toFixed(1)}, scaledForPhysics=${scaledKnockback.toFixed(1)}`);
